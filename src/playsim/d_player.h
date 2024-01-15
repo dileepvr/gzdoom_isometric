@@ -304,7 +304,7 @@ public:
 	uint32_t		original_oldbuttons;
 
 	userinfo_t	userinfo;				// [RH] who is this?
-	
+
 	PClassActor *cls = nullptr;				// class of associated PlayerPawn
 
 	float		DesiredFOV = 0;				// desired field of vision
@@ -319,6 +319,9 @@ public:
 	// This only represents the thrust that the player applies himself.
 	// This avoids anomalies with such things as Boom ice and conveyors.
 	DVector2 Vel = { 0,0 };
+  // Used by isometric camera (% 8 cardinal directions) (See RenderViewpoint() in src/rendering/hwrenderer/hw_entrypoint.cpp)
+  int isoviewpoint = 1;
+  int isoyaw = 225; // degrees // 3.927f;
 
 	bool		centering = false;
 	uint8_t		turnticks = 0;
@@ -434,7 +437,7 @@ public:
 			viewheight = mo ? mo->FloatVar(NAME_ViewHeight) : 0;
 		}
 	}
-	
+
 	int GetSpawnClass();
 
 	// PSprite layers

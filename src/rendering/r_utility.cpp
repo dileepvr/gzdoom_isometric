@@ -101,6 +101,35 @@ CVAR (Bool, r_deathcamera, false, CVAR_ARCHIVE)
 CVAR (Int, r_clearbuffer, 0, 0)
 CVAR (Bool, r_drawvoxels, true, 0)
 CVAR (Bool, r_drawplayersprites, true, 0)	// [RH] Draw player sprites?
+CVARD (Bool, r_isocam, false,  CVAR_ARCHIVE | CVAR_SERVERINFO | CVAR_CHEAT, "render from isometric viewpoint.")
+CVARD (Bool, r_orthographic, true, CVAR_ARCHIVE | CVAR_SERVERINFO | CVAR_CHEAT, "render orthographic projection. Only used with r_isocam")
+CUSTOM_CVARD(Float, r_iso_pitch, 30.0f, CVAR_ARCHIVE | CVAR_SERVERINFO | CVAR_CHEAT, "pitch for isometric camera: 0 to 89 degrees.")
+{
+        if (self < 0.f)
+	        self = 0.f;
+	else if (self > 89.f)
+	        self = 89.f;
+}
+CUSTOM_CVAR(Float, r_iso_camdist, 1000.0f, CVAR_ARCHIVE | CVAR_SERVERINFO | CVAR_CHEAT)
+{
+        // Keep this large to avoid clipping, not used if r_orthographic is false
+        if (self < 1000.f)
+	        self = 1000.f;
+}
+CUSTOM_CVARD(Int, r_isoviewpoint, 0, CVAR_ARCHIVE, "Isometric viewpoint angle. 1 to 8 for cardinal directions. 0 for ignore and use player->isoviewpoint. 9 for continuous use player->isoyaw.")
+{
+	if (self < 0)
+		self = 0;
+	else if (self > 9)
+		self = 9;
+}
+CUSTOM_CVARD(Float, r_iso_dist, 300.0, CVAR_ARCHIVE | CVAR_SERVERINFO | CVAR_CHEAT, "how far the isometric camera (r_isocam) is in the XY plane")
+{
+	if (self < 0.f)
+		self = 0.f;
+	else if (self > 1000.f)
+		self = 1000.f;
+}
 CUSTOM_CVAR(Float, r_quakeintensity, 1.0f, CVAR_ARCHIVE | CVAR_GLOBALCONFIG)
 {
 	if (self < 0.f) self = 0.f;
@@ -242,7 +271,7 @@ void R_SetWindow (FRenderViewpoint &viewpoint, FViewWindow &viewwindow, int wind
 		DrawFSHUD = (windowSize == 11);
 	}
 
-	
+
 	// [RH] Sky height fix for screens not 200 (or 240) pixels tall
 	R_InitSkyMap ();
 
@@ -602,7 +631,7 @@ void R_ResetViewInterpolation ()
 
 //==========================================================================
 //
-// R_SetViewAngle 
+// R_SetViewAngle
 // sets all values derived from the view angle.
 //
 //==========================================================================
@@ -749,7 +778,7 @@ void R_AddInterpolationPoint(const DVector3a &vec)
 //==========================================================================
 
 static double QuakePower(double factor, double intensity, double offset)
-{ 
+{
 	double randumb;
 	if (intensity == 0)
 	{
@@ -927,14 +956,14 @@ void R_SetupFrame (FRenderViewpoint &viewpoint, FViewWindow &viewwindow, AActor 
 
 				if (next != orig)
 				{
-					// [MC] Disable interpolation if the camera view is crossing through a portal. Sometimes 
+					// [MC] Disable interpolation if the camera view is crossing through a portal. Sometimes
 					// the player is made visible when crossing a portal and it's extremely jarring.
 					// Also, disable the portal interpolation pathing entirely when using the viewpos feature.
 					// Interpolation still happens with everything else though and seems to work fine.
 					DefaultDraw = false;
 					viewpoint.NoPortalPath = true;
 					P_AdjustViewPos(mo, orig, next, viewpoint.sector, unlinked, VP);
-					
+
 					if (viewpoint.sector->PortalGroup != oldsector->PortalGroup || (unlinked && ((iview->New.Pos.XY() - iview->Old.Pos.XY()).LengthSquared()) > 256 * 256))
 					{
 						iview->otic = nowtic;
@@ -945,7 +974,7 @@ void R_SetupFrame (FRenderViewpoint &viewpoint, FViewWindow &viewwindow, AActor 
 				}
 			}
 		}
-		
+
 		if (DefaultDraw)
 		{
 			iview->New.Pos = orig;
@@ -1144,10 +1173,10 @@ void R_SetupFrame (FRenderViewpoint &viewpoint, FViewWindow &viewwindow, AActor 
 	{
 		screen->SetClearColor(GPalette.BlackIndex);
     }
-	
-	
+
+
 	// And finally some info that is needed for the hardware renderer
-	
+
 	// Scale the pitch to account for the pixel stretching, because the playsim doesn't know about this and treats it as 1:1.
 	// However, to set up a projection matrix this needs to be adjusted.
 	double radPitch = viewpoint.Angles.Pitch.Normalized180().Radians();
@@ -1155,9 +1184,9 @@ void R_SetupFrame (FRenderViewpoint &viewpoint, FViewWindow &viewwindow, AActor 
 	double angy = sin(radPitch) * actor->Level->info->pixelstretch;
 	double alen = sqrt(angx*angx + angy*angy);
 	viewpoint.HWAngles.Pitch = FAngle::fromRad((float)asin(angy / alen));
-	
+
 	viewpoint.HWAngles.Roll = FAngle::fromDeg(viewpoint.Angles.Roll.Degrees());    // copied for convenience.
-	
+
 	// ViewActor only gets set, if the camera actor should not be rendered
 	if (actor->player && actor->player - players == consoleplayer &&
 		((actor->player->cheats & CF_CHASECAM) || (r_deathcamera && actor->health <= 0)) && actor == actor->player->mo)
@@ -1168,7 +1197,7 @@ void R_SetupFrame (FRenderViewpoint &viewpoint, FViewWindow &viewwindow, AActor 
 	{
 		viewpoint.ViewActor = actor;
 	}
-	
+
 }
 
 
@@ -1193,7 +1222,7 @@ bool R_ShouldDrawSpriteShadow(AActor *thing)
 {
 	int rf = thing->renderflags;
 	// for wall and flat sprites the shadow math does not work so these must be unconditionally skipped.
-	if (rf & (RF_FLATSPRITE | RF_WALLSPRITE)) return false;	
+	if (rf & (RF_FLATSPRITE | RF_WALLSPRITE)) return false;
 
 	bool doit = false;
 	switch (r_actorspriteshadow)

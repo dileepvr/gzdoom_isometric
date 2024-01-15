@@ -188,7 +188,7 @@ DEFINE_ACTION_FUNCTION(FPlayerClass, CheckSkin)
 //===========================================================================
 
 FString GetPrintableDisplayName(PClassActor *cls)
-{ 
+{
 	// Fixme; This needs a decent way to access the string table without creating a mess.
 	// [RH] ????
 	return cls->GetDisplayName();
@@ -270,6 +270,8 @@ void player_t::CopyFrom(player_t &p, bool copyPSP)
 	deltaviewheight = p.deltaviewheight;
 	bob = p.bob;
 	Vel = p.Vel;
+	isoviewpoint = p.isoviewpoint;
+	isoyaw = p.isoyaw;
 	centering = p.centering;
 	turnticks = p.turnticks;
 	attackdown = p.attackdown;
@@ -578,8 +580,8 @@ DEFINE_ACTION_FUNCTION(FPlayerClass, GetColorSetName)
 
 static int GetPainFlash(AActor *info, int type)
 {
-	// go backwards through the list and return the first item with a 
-	// matching damage type for an ancestor of our class. 
+	// go backwards through the list and return the first item with a
+	// matching damage type for an ancestor of our class.
 	// This will always return the best fit because any parent class
 	// must be processed before its children.
 	for (int i = PainFlashes.Size() - 1; i >= 0; i--)
@@ -679,7 +681,7 @@ bool player_t::Resurrect()
 	mo->renderflags &= ~RF_INVISIBLE;
 	mo->Height = mo->GetDefault()->Height;
 	mo->radius = mo->GetDefault()->radius;
-	mo->special1 = 0;	// required for the Hexen fighter's fist attack. 
+	mo->special1 = 0;	// required for the Hexen fighter's fist attack.
 								// This gets set by AActor::Die as flag for the wimpy death and must be reset here.
 	mo->SetState(mo->SpawnState);
 	int pnum = mo->Level->PlayerNum(this);
@@ -805,7 +807,7 @@ DEFINE_ACTION_FUNCTION(_PlayerInfo, GetStillBob)
 
 //===========================================================================
 //
-// 
+//
 //
 //===========================================================================
 
@@ -878,7 +880,7 @@ void PlayIdle (AActor *player)
 //
 // A_PlayerScream
 //
-// try to find the appropriate death sound and use suitable 
+// try to find the appropriate death sound and use suitable
 // replacements if necessary
 //
 //===========================================================================
@@ -979,7 +981,7 @@ void P_CheckPlayerSprite(AActor *actor, int &spritenum, DVector2 &scale)
 	if (player->mo == actor && player->crouchfactor < 0.75)
 	{
 		int crouchsprite = player->mo->IntVar(NAME_crouchsprite);
-		if (spritenum == actor->SpawnState->sprite || spritenum == crouchsprite) 
+		if (spritenum == actor->SpawnState->sprite || spritenum == crouchsprite)
 		{
 			crouchspriteno = crouchsprite;
 		}
@@ -994,7 +996,7 @@ void P_CheckPlayerSprite(AActor *actor, int &spritenum, DVector2 &scale)
 			crouchspriteno = -1;
 		}
 
-		if (crouchspriteno > 0) 
+		if (crouchspriteno > 0)
 		{
 			spritenum = crouchspriteno;
 		}
@@ -1028,7 +1030,7 @@ void P_FallingDamage (AActor *actor)
 
 	if (damagestyle == 0)
 		return;
-		
+
 	if (actor->floorsector->Flags & SECF_NOFALLINGDAMAGE)
 		return;
 
@@ -1060,7 +1062,7 @@ void P_FallingDamage (AActor *actor)
 			}
 		}
 		break;
-	
+
 	case DF_FORCE_FALLINGZD:		// ZDoom falling damage
 		if (vel <= 19)
 		{ // Not fast enough to hurt
@@ -1431,7 +1433,7 @@ void P_PredictPlayer (player_t *player)
 	if (!(act->flags & MF_NOSECTOR))
 	{
 		AActor *link = act->Sector->thinglist;
-		
+
 		while (link != NULL)
 		{
 			PredictionSectorListBackup.Push(link);
@@ -1627,6 +1629,8 @@ void player_t::Serialize(FSerializer &arc)
 		("deltaviewheight", deltaviewheight)
 		("bob", bob)
 		("vel", Vel)
+	  ("isoviewpoint", isoviewpoint)
+	  ("isoyaw", isoyaw)
 		("centering", centering)
 		("health", health)
 		("inventorytics", inventorytics)
@@ -1734,6 +1738,8 @@ DEFINE_FIELD_X(PlayerInfo, player_t, viewheight)
 DEFINE_FIELD_X(PlayerInfo, player_t, deltaviewheight)
 DEFINE_FIELD_X(PlayerInfo, player_t, bob)
 DEFINE_FIELD_X(PlayerInfo, player_t, Vel)
+DEFINE_FIELD_X(PlayerInfo, player_t, isoviewpoint)
+DEFINE_FIELD_X(PlayerInfo, player_t, isoyaw)
 DEFINE_FIELD_X(PlayerInfo, player_t, centering)
 DEFINE_FIELD_X(PlayerInfo, player_t, turnticks)
 DEFINE_FIELD_X(PlayerInfo, player_t, attackdown)

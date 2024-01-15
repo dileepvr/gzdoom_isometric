@@ -40,7 +40,7 @@ struct FRenderViewpoint
 
 	double			TicFrac;		// fraction of tic for interpolation
 	uint32_t		FrameTime;		// current frame's time in tics.
-	
+
 	int				extralight;		// extralight to be added to this viewpoint
 	bool			showviewer;		// show the camera actor?
 	bool			NoPortalPath;	// Disable portal interpolation path for actor viewpos.

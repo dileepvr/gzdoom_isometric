@@ -17,7 +17,7 @@ class PlayerPawn : Actor
 	const TURN180_TICKS = ((TICRATE / 4) + 1);
 	// 16 pixels of bob
 	const MAXBOB = 16.;
-	
+
 	int			crouchsprite;
 	int			MaxHealth;
 	int			BonusHealth;
@@ -57,7 +57,7 @@ class PlayerPawn : Actor
 	meta int TeleportFreezeTime;
 	meta int ColorRangeStart;	// Skin color range
 	meta int ColorRangeEnd;
-	
+
 	property prefix: Player;
 	property HealRadiusType: HealingradiusType;
 	property InvulnerabilityMode: InvulMode;
@@ -76,12 +76,12 @@ class PlayerPawn : Actor
 	property Portrait: Portrait;
 	property TeleportFreezeTime: TeleportFreezeTime;
 	property ViewBob: ViewBob;
-	
+
 	flagdef NoThrustWhenInvul: PlayerFlags, 0;
 	flagdef CanSuperMorph: PlayerFlags, 1;
 	flagdef CrouchableMorph: PlayerFlags, 2;
 	flagdef WeaponLevel2Ended: PlayerFlags, 3;
-	
+
 	Default
 	{
 		Health 100;
@@ -121,8 +121,8 @@ class PlayerPawn : Actor
 		Player.TeleportFreezeTime 18;
 		Obituary "$OB_MPDEFAULT";
 	}
-	
-	
+
+
 	//===========================================================================
 	//
 	// PlayerPawn :: Tick
@@ -159,7 +159,7 @@ class PlayerPawn : Actor
 
 	//===========================================================================
 	//
-	// 
+	//
 	//
 	//===========================================================================
 
@@ -170,7 +170,7 @@ class PlayerPawn : Actor
 		FullHeight = Height;
 		if (!SetupCrouchSprite(crouchsprite)) crouchsprite = 0;
 	}
-	
+
 	//===========================================================================
 	//
 	// PlayerPawn :: PostBeginPlay
@@ -195,7 +195,7 @@ class PlayerPawn : Actor
 		}
 	}
 
-	
+
 	//===========================================================================
 	//
 	// PlayerPawn :: MarkPrecacheSounds
@@ -207,10 +207,10 @@ class PlayerPawn : Actor
 		Super.MarkPrecacheSounds();
 		MarkPlayerSounds();
 	}
-	
+
 	//----------------------------------------------------------------------------
 	//
-	// 
+	//
 	//
 	//----------------------------------------------------------------------------
 
@@ -225,7 +225,7 @@ class PlayerPawn : Actor
 		if (InStateSequence(CurState, SpawnState) && SeeState != NULL)
 			SetState (SeeState);
 	}
-	
+
 	virtual void PlayAttacking ()
 	{
 		if (MissileState != null) SetState (MissileState);
@@ -235,14 +235,14 @@ class PlayerPawn : Actor
 	{
 		if (MeleeState != null) SetState (MeleeState);
 	}
-	
+
 	virtual void MorphPlayerThink()
 	{
 	}
-	
+
 	//----------------------------------------------------------------------------
 	//
-	// 
+	//
 	//
 	//----------------------------------------------------------------------------
 
@@ -262,10 +262,10 @@ class PlayerPawn : Actor
 			bRespawnInvul = true;			// [RH] special effect
 		}
 	}
-	
+
 	//----------------------------------------------------------------------------
 	//
-	// 
+	//
 	//
 	//----------------------------------------------------------------------------
 
@@ -298,21 +298,21 @@ class PlayerPawn : Actor
 			return message;
 		}
 	}
-	
+
 	//----------------------------------------------------------------------------
 	//
 	// This is for SBARINFO.
 	//
 	//----------------------------------------------------------------------------
 
-	clearscope int, int GetEffectTicsForItem(class<Inventory> item) const 
+	clearscope int, int GetEffectTicsForItem(class<Inventory> item) const
 	{
 		let pg = (class<PowerupGiver>)(item);
 		if (pg != null)
 		{
 			let powerupType = (class<Powerup>)(GetDefaultByType(pg).PowerupType);
 			let powerup = Powerup(FindInventory(powerupType));
-			if(powerup != null) 
+			if(powerup != null)
 			{
 				let maxtics = GetDefaultByType(pg).EffectTics;
 				if (maxtics == 0) maxtics = powerup.default.EffectTics;
@@ -321,7 +321,7 @@ class PlayerPawn : Actor
 		}
 		return -1, -1;
 	}
-	
+
 
 	//===========================================================================
 	//
@@ -334,11 +334,11 @@ class PlayerPawn : Actor
 	void CheckWeaponSwitch(Class<Ammo> ammotype)
 	{
 		let player = self.player;
-		if (!player.GetNeverSwitch() &&	player.PendingWeapon == WP_NOCHANGE && 
+		if (!player.GetNeverSwitch() &&	player.PendingWeapon == WP_NOCHANGE &&
 			(player.ReadyWeapon == NULL || player.ReadyWeapon.bWimpy_Weapon))
 		{
 			let best = BestWeapon (ammotype);
-			if (best != NULL && !best.bNoAutoSwitchTo && 
+			if (best != NULL && !best.bNoAutoSwitchTo &&
 				(player.ReadyWeapon == NULL || best.SelectionOrder < player.ReadyWeapon.SelectionOrder))
 			{
 				player.PendingWeapon = best;
@@ -355,7 +355,7 @@ class PlayerPawn : Actor
 	virtual void FireWeapon (State stat)
 	{
 		let player = self.player;
-		
+
 		let weapn = player.ReadyWeapon;
 		if (weapn == null || !weapn.CheckAmmo (Weapon.PrimaryFire, true))
 		{
@@ -461,7 +461,7 @@ class PlayerPawn : Actor
 	virtual void CheckWeaponChange ()
 	{
 		let player = self.player;
-		if (!player) return;	
+		if (!player) return;
 		if ((player.WeaponState & WF_DISABLESWITCH) || // Weapon changing has been disabled.
 			player.morphTics != 0)					// Morphed classes cannot change weapons.
 		{ // ...so throw away any pending weapon requests.
@@ -476,7 +476,7 @@ class PlayerPawn : Actor
 			DropWeapon();
 		}
 	}
-	
+
 	//------------------------------------------------------------------------
 	//
 	// PROC P_MovePsprites
@@ -492,7 +492,7 @@ class PlayerPawn : Actor
 		while (pspr)
 		{
 			// Destroy the psprite if it's from a weapon that isn't currently selected by the player
-			// or if it's from an inventory item that the player no longer owns. 
+			// or if it's from an inventory item that the player no longer owns.
 			if ((pspr.Caller == null ||
 				(pspr.Caller is "Inventory" && Inventory(pspr.Caller).Owner != pspr.Owner.mo) ||
 				(pspr.Caller is "Weapon" && pspr.Caller != pspr.Owner.ReadyWeapon)))
@@ -526,7 +526,7 @@ class PlayerPawn : Actor
 			}
 		}
 	}
-	
+
 	/*
 	==================
 	=
@@ -624,8 +624,8 @@ class PlayerPawn : Actor
 				if (player.deltaviewheight <= 0)
 					player.deltaviewheight = 1 / 65536.;
 			}
-			
-			if (player.deltaviewheight)	
+
+			if (player.deltaviewheight)
 			{
 				player.deltaviewheight += 0.25;
 				if (!player.deltaviewheight)
@@ -708,12 +708,12 @@ class PlayerPawn : Actor
 			}
 		}
 		player.mo.CalcHeight ();
-			
+
 		if (player.attacker && player.attacker != self)
 		{ // Watch killer
 			double diff = deltaangle(angle, AngleTo(player.attacker));
 			double delta = abs(diff);
-	
+
 			if (delta < 10)
 			{ // Looking at killer, so fade damage and poison counters
 				if (player.damagecount)
@@ -738,7 +738,7 @@ class PlayerPawn : Actor
 			{
 				player.poisoncount--;
 			}
-		}		
+		}
 
 		if ((player.cmd.buttons & BT_USE ||
 			((deathmatch || alwaysapplydmflags) && sv_forcerespawn)) && !sv_norespawn)
@@ -792,7 +792,7 @@ class PlayerPawn : Actor
 							}
 							di = di.Next;
 						}
-					} 
+					}
 					else if (weap.SpawnState != NULL &&
 						weap.SpawnState != GetDefaultByType('Actor').SpawnState)
 					{
@@ -833,7 +833,7 @@ class PlayerPawn : Actor
 			}
 		}
 	}
-	
+
 	//===========================================================================
 	//
 	// PlayerPawn :: FilterCoopRespawnInventory
@@ -939,7 +939,7 @@ class PlayerPawn : Actor
 		PickNewWeapon (NULL);
 	}
 
-	
+
 	//----------------------------------------------------------------------------
 	//
 	// PROC P_CheckFOV
@@ -1063,7 +1063,7 @@ class PlayerPawn : Actor
 	virtual void CrouchMove(int direction)
 	{
 		let player = self.player;
-		
+
 		double defaultheight = FullHeight;
 		double savedheight = Height;
 		double crouchspeed = direction * CROUCHSPEED;
@@ -1182,7 +1182,7 @@ class PlayerPawn : Actor
 		}
 		player.Vel += AngleToVector(angle, move);
 	}
-	
+
 	//===========================================================================
 	//
 	// PlayerPawn :: TweakSpeeds
@@ -1317,7 +1317,7 @@ class PlayerPawn : Actor
 				player.camera = player.mo;
 			}
 		}
-	}		
+	}
 
 	//----------------------------------------------------------------------------
 	//
@@ -1593,12 +1593,12 @@ class PlayerPawn : Actor
 	// PROC P_PlayerThink
 	//
 	//----------------------------------------------------------------------------
-	
+
 	virtual void PlayerThink()
 	{
 		let player = self.player;
 		UserCmd cmd = player.cmd;
-		
+
 		CheckFOV();
 
 		if (player.inventorytics)
@@ -1687,7 +1687,7 @@ class PlayerPawn : Actor
 			if (player.ReadyWeapon != null)
 			{
 				let psp = player.GetPSprite(PSP_WEAPON);
-				if (psp) 
+				if (psp)
 				{
 					psp.y = WEAPONTOP;
 					player.ReadyWeapon.ResetPSprite(psp);
@@ -1726,7 +1726,7 @@ class PlayerPawn : Actor
 			player.SetPsprite(PSP_WEAPON, weapon.GetUpState());
 		}
 	}
-	
+
 	//===========================================================================
 	//
 	// PlayerPawn :: BestWeapon
@@ -1786,7 +1786,7 @@ class PlayerPawn : Actor
 		return bestMatch;
 	}
 
-	
+
 	//---------------------------------------------------------------------------
 	//
 	// PROC P_DropWeapon
@@ -1810,7 +1810,7 @@ class PlayerPawn : Actor
 			player.SetPsprite(PSP_WEAPON, weap.GetDownState());
 		}
 	}
-	
+
 	//===========================================================================
 	//
 	// PlayerPawn :: PickNewWeapon
@@ -1955,7 +1955,7 @@ class PlayerPawn : Actor
 
 	//===========================================================================
 	//
-	// 
+	//
 	//
 	//===========================================================================
 
@@ -1965,10 +1965,10 @@ class PlayerPawn : Actor
 		if (withupgrades) ret += stamina + BonusHealth;
 		return ret;
 	}
-	
+
 	//===========================================================================
 	//
-	// 
+	//
 	//
 	//===========================================================================
 
@@ -1983,8 +1983,8 @@ class PlayerPawn : Actor
 		}
 		return TeleportFreezeTime;
 	}
-	
-	
+
+
 	//===========================================================================
 	//
 	// G_PlayerFinishLevel
@@ -2098,7 +2098,7 @@ class PlayerPawn : Actor
 			item.PreTravelled();
 		}
 	}
-	 
+
 	//===========================================================================
 	//
 	// FWeaponSlot :: PickWeapon
@@ -2183,7 +2183,7 @@ class PlayerPawn : Actor
 		let ReadyWeapon = player.ReadyWeapon;
 		if (player.PendingWeapon != WP_NOCHANGE)
 		{
-			// Workaround for the current inability 
+			// Workaround for the current inability
 			bool found;
 			int slot;
 			int index;
@@ -2437,10 +2437,10 @@ class PlayerPawn : Actor
 		}
 		return p1 * (1. - ticfrac) + p2 * ticfrac;
 	}
-	
+
 	//----------------------------------------------------------------------------
 	//
-	// 
+	//
 	//
 	//----------------------------------------------------------------------------
 
@@ -2450,7 +2450,7 @@ class PlayerPawn : Actor
 		if (painFlash == 0) painFlash = DamageFade;
 		return painFlash;
 	}
-		
+
 	//===========================================================================
 	//
 	// PlayerPawn :: ResetAirSupply
@@ -2501,7 +2501,7 @@ class PlayerPawn : Actor
 
 	//----------------------------------------------------------------------------
 	//
-	// 
+	//
 	//
 	//----------------------------------------------------------------------------
 
@@ -2592,7 +2592,7 @@ class PSprite : Object native play
 		TARGETRIGHT,
 	};
 
-	native readonly State CurState; 
+	native readonly State CurState;
 	native Actor Caller;
 	native readonly PSprite Next;
 	native readonly PlayerInfo Owner;
@@ -2623,7 +2623,7 @@ class PSprite : Object native play
 	native bool bAddBob;
 	native bool bPowDouble;
 	native bool bCVarFast;
-	native bool bFlip;	
+	native bool bFlip;
 	native bool bMirror;
 	native bool bPlayerTranslated;
 	native bool bPivotPercent;
@@ -2651,13 +2651,13 @@ class PSprite : Object native play
 			}
 		}
 	}
-	
-	void ResetInterpolation() 
-	{ 
-		oldx = x; 
-		oldy = y; 
+
+	void ResetInterpolation()
+	{
+		oldx = x;
+		oldy = y;
 	}
-		
+
 }
 
 enum EPlayerState
@@ -2682,7 +2682,7 @@ struct PlayerInfo native play	// self is what internally is known as player_t
 	// technically engine constants but the only part of the playsim using them is the player.
 	const NOFIXEDCOLORMAP = -1;
 	const NUMCOLORMAPS = 32;
-	
+
 	native PlayerPawn mo;
 	native uint8 playerstate;
 	native readonly uint buttons;
@@ -2695,6 +2695,8 @@ struct PlayerInfo native play	// self is what internally is known as player_t
 	native double deltaviewheight;
 	native double bob;
 	native vector2 vel;
+	native int isoviewpoint;
+	native int isoyaw;
 	native bool centering;
 	native uint8 turnticks;
 	native bool attackdown;
@@ -2809,7 +2811,7 @@ struct PlayerInfo native play	// self is what internally is known as player_t
 		}
 		return false;
 	}
-	
+
 	// This somehow got its arguments mixed up. 'self' should have been the player to be unmorphed, not the activator
 	deprecated("3.7", "UndoPlayerMorph() should be used on a PlayerPawn object") bool UndoPlayerMorph(playerinfo player, int unmorphflag = 0, bool force = false)
 	{
@@ -2832,7 +2834,7 @@ struct PlayerInfo native play	// self is what internally is known as player_t
 	{
 		if (mo) mo.BringUpWeapon();
 	}
-	
+
 	clearscope bool IsTotallyFrozen() const
 	{
 		return
@@ -2853,14 +2855,14 @@ struct PlayerInfo native play	// self is what internally is known as player_t
 			viewheight = mo.ViewHeight;
 		}
 	}
-	
+
 
 	clearscope int fragSum () const
 	{
 		int i;
 		int allfrags = 0;
 		int playernum = mo.PlayerNumber();
-	
+
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
 			if (playeringame[i]
@@ -2869,17 +2871,17 @@ struct PlayerInfo native play	// self is what internally is known as player_t
 				allfrags += frags[i];
 			}
 		}
-		
+
 		// JDC hack - negative frags.
 		allfrags -= frags[playernum];
 		return allfrags;
 	}
-	
+
 	double GetDeltaViewHeight()
 	{
 		return (mo.ViewHeight + crouchviewdelta - viewheight) / 8;
 	}
-	
+
 }
 
 struct PlayerClass native
@@ -2887,7 +2889,7 @@ struct PlayerClass native
 	native class<Actor> Type;
 	native uint Flags;
 	native Array<int> Skins;
-	
+
 	native bool CheckSkin(int skin);
 	native void EnumColorsets(out Array<int> data);
 	native Name GetColorsetName(int setnum);
