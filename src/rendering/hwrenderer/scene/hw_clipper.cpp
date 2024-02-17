@@ -405,7 +405,7 @@ angle_t Clipper::PointToPseudoAngle(double x, double y)
 		{
 		        double xproj = disp.XY().Length() * deltaangle(disp.Angle(), viewpoint->Angles.Yaw).Sin();
 			double screenproj = viewpoint->Angles.Pitch.Tan() / viewpoint->camera->ViewPos->Offset.XY().Length();
-			xproj *= 2.0 * screenproj * viewpoint->FieldOfView.Degrees();
+			xproj *= screenproj * viewpoint->FieldOfView.Degrees();
 			return AngleToPseudo( DAngle::fromDeg( viewpoint->Angles.Yaw.Degrees() - xproj ).BAMs() );
 		}
 	}
@@ -439,7 +439,7 @@ angle_t Clipper::PointToPseudoPitch(double x, double y, double z)
 		  double yproj = viewpoint->PitchSin * disp.XY().Length() * deltaangle(disp.Angle(), viewpoint->Angles.Yaw).Cos();
 		  yproj += viewpoint->PitchCos * disp.Z;
 		  double screenproj = viewpoint->Angles.Pitch.Tan() / viewpoint->camera->ViewPos->Offset.XY().Length();
-		  yproj *= 2.0 * screenproj * viewpoint->FieldOfView.Degrees();
+		  yproj *= screenproj * viewpoint->FieldOfView.Degrees();
 		  return PitchToPseudo(viewpoint->Angles.Pitch.Degrees() - yproj);
 		}
 		else return PitchToPseudo(viewpoint->Angles.Pitch.Degrees());
