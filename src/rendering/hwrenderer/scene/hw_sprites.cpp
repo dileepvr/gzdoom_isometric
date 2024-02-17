@@ -1032,17 +1032,10 @@ void HWSprite::Process(HWDrawInfo *di, AActor* thing, sector_t * sector, area_t 
 			y2 = y + viewvecX*rightfac;
 			if((di->Viewpoint.camera->ViewPos != NULL) && (di->Viewpoint.camera->ViewPos->Flags & VPSF_ISOMETRICSPRITES)) // If sprites are drawn from an isometric perspective
 			{
-			        float signX = 1.0;
-				float signY = 1.0;
-				if(viewvecX < 0) signX = -1.0;
-				if(viewvecY < 0) signY = -1.0;
-				if(viewvecX == 0) signX = 0.0;
-				if(viewvecY == 0) signY = 0.0;
-
-				x1 -= signX * thing->radius;
-				x2 -= signX * thing->radius;
-				y1 -= signY * thing->radius;
-				y2 -= signY * thing->radius;
+				x1 -= viewvecX * thing->radius * M_SQRT2;
+				x2 -= viewvecX * thing->radius * M_SQRT2;
+				y1 -= viewvecY * thing->radius * M_SQRT2;
+				y2 -= viewvecY * thing->radius * M_SQRT2;
 			}
 			break;
 		}

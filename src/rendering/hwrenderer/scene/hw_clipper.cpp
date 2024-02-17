@@ -193,7 +193,7 @@ void Clipper::AddClipRange(angle_t start, angle_t end)
 
 				if (node->end < end) 
 				{
-					node->end = end;
+					node->end = end; // [DVR] This never triggers because of previous while loop. Remove?
 				}
 
 				ClipNode *node2 = node->next;
@@ -363,6 +363,17 @@ angle_t Clipper::AngleToPseudo(angle_t ang)
 
 //-----------------------------------------------------------------------------
 //
+//
+//
+//-----------------------------------------------------------------------------
+
+angle_t Clipper::PitchToPseudo(double ang)
+{
+        return AngleToPseudo(DAngle::fromDeg(-1.0*ang).BAMs()); // Pitch is positive when looking down
+}
+
+//-----------------------------------------------------------------------------
+//
 // ! Returns the pseudoangle between the line p1 to (infinity, p1.y) and the 
 // line from p1 to p2. The pseudoangle has the property that the ordering of 
 // points by true angle around p1 and ordering of points by pseudoangle are the 
@@ -383,6 +394,21 @@ angle_t Clipper::PointToPseudoAngle(double x, double y)
 	{
 		return 0;
 	}
+	else if ((viewpoint->camera->ViewPos != NULL) && (viewpoint->camera->ViewPos->Flags & VPSF_ORTHOGRAPHIC))
+	{
+	        DVector3 disp = DVector3( x, y, 0 ) - viewpoint->camera->Pos();
+		if (viewpoint->camera->ViewPos->Offset.XY().Length() == 0)
+		{
+		        return AngleToPseudo( viewpoint->Angles.Yaw.BAMs() );
+		}
+		else
+		{
+		        double xproj = disp.XY().Length() * deltaangle(disp.Angle(), viewpoint->Angles.Yaw).Sin();
+			double screenproj = viewpoint->Angles.Pitch.Tan() / viewpoint->camera->ViewPos->Offset.XY().Length();
+			xproj *= 2.0 * screenproj * viewpoint->FieldOfView.Degrees();
+			return AngleToPseudo( DAngle::fromDeg( viewpoint->Angles.Yaw.Degrees() - xproj ).BAMs() );
+		}
+	}
 	else
 	{
 		double result = vecy / (fabs(vecx) + fabs(vecy));
@@ -394,7 +420,40 @@ angle_t Clipper::PointToPseudoAngle(double x, double y)
 	}
 }
 
+angle_t Clipper::PointToPseudoPitch(double x, double y, double z)
+{
+	double vecx = x - viewpoint->Pos.X;
+	double vecy = y - viewpoint->Pos.Y;
+	double vecz = z - viewpoint->Pos.Z;
+	double result = 0;
 
+	if (vecx == 0 && vecy == 0 && vecz == 0)
+	{
+		return 0;
+	}
+	else if ((viewpoint->camera->ViewPos != NULL) && (viewpoint->camera->ViewPos->Flags & VPSF_ORTHOGRAPHIC))
+	{
+	        DVector3 disp = DVector3( x, y, z ) - viewpoint->camera->Pos();
+		if (viewpoint->camera->ViewPos->Offset.XY().Length() > 0)
+		{
+		  double yproj = viewpoint->PitchSin * disp.XY().Length() * deltaangle(disp.Angle(), viewpoint->Angles.Yaw).Cos();
+		  yproj += viewpoint->PitchCos * disp.Z;
+		  double screenproj = viewpoint->Angles.Pitch.Tan() / viewpoint->camera->ViewPos->Offset.XY().Length();
+		  yproj *= 2.0 * screenproj * viewpoint->FieldOfView.Degrees();
+		  return PitchToPseudo(viewpoint->Angles.Pitch.Degrees() - yproj);
+		}
+		else return PitchToPseudo(viewpoint->Angles.Pitch.Degrees());
+	}
+	else
+	{
+	        double result = vecz / (g_sqrt(vecx*vecx + vecy*vecy) + fabs(vecz)); // -ffast-math compile flag applies to this file, yes?
+		if ((vecx * viewpoint->TanCos + vecy * viewpoint->TanSin) <= 0.0) // Point is behind viewpoint
+		{
+		        result = 2.0 - result;
+		}
+		return xs_Fix<30>::ToFix(result); // range to -1 to 1 to 3 (bottom to top to suplex)
+	}
+}
 
 //-----------------------------------------------------------------------------
 //

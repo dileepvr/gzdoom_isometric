@@ -267,8 +267,27 @@ void HWDrawInfo::AddLine (seg_t *seg, bool portalclip)
 	}
 
 	auto &clipper = *mClipper;
+	auto &clipperv = *vClipper;
 	angle_t startAngle = clipper.GetClipAngle(seg->v2);
 	angle_t endAngle = clipper.GetClipAngle(seg->v1);
+	angle_t startPitch = clipperv.PointToPseudoPitch(seg->v1->fX(), seg->v1->fY(), currentsector->floorplane.ZatPoint(seg->v1));
+	angle_t endPitch = clipperv.PointToPseudoPitch(seg->v1->fX(), seg->v1->fY(), currentsector->ceilingplane.ZatPoint(seg->v1));
+	angle_t startPitch2 = clipperv.PointToPseudoPitch(seg->v2->fX(), seg->v2->fY(), currentsector->floorplane.ZatPoint(seg->v2));
+	angle_t endPitch2 = clipperv.PointToPseudoPitch(seg->v2->fX(), seg->v2->fY(), currentsector->ceilingplane.ZatPoint(seg->v2));
+	angle_t temp;
+	// Wall can be tilted from viewpoint perspective. Find vertical extent on screen in psuedopitch units (-1 to 1, bottom to top)
+	if(startPitch > startPitch2)
+	{
+	        temp = startPitch;
+		startPitch = startPitch2;
+		startPitch2 = temp;
+	}
+	if(endPitch > endPitch2)
+	{
+	        temp = endPitch;
+		endPitch = endPitch2;
+		endPitch2 = temp;
+	}
 
 	// Back side, i.e. backface culling	- read: endAngle >= startAngle!
 	if (startAngle-endAngle<ANGLE_180)  
@@ -288,7 +307,7 @@ void HWDrawInfo::AddLine (seg_t *seg, bool portalclip)
 		return;
 	}
 
-	if (!clipper.SafeCheckRange(startAngle, endAngle)) 
+	if (!clipper.SafeCheckRange(startAngle, endAngle) || !clipperv.SafeCheckRange(startPitch, endPitch2))
 	{
 		return;
 	}
@@ -298,7 +317,8 @@ void HWDrawInfo::AddLine (seg_t *seg, bool portalclip)
 
 	if (!seg->backsector)
 	{
-		clipper.SafeAddClipRange(startAngle, endAngle);
+	        if(!((Viewpoint.camera->ViewPos != NULL) && (Viewpoint.camera->ViewPos->Flags & VPSF_ALLOWOUTOFBOUNDS)))
+		        clipper.SafeAddClipRange(startAngle, endAngle); // Don't clip if camera allowed out of bounds
 	}
 	else if (!ispoly)	// Two-sided polyobjects never obstruct the view
 	{
@@ -325,7 +345,8 @@ void HWDrawInfo::AddLine (seg_t *seg, bool portalclip)
 
 			if (hw_CheckClip(seg->sidedef, currentsector, backsector))
 			{
-				clipper.SafeAddClipRange(startAngle, endAngle);
+			        if(!((Viewpoint.camera->ViewPos != NULL) && (Viewpoint.camera->ViewPos->Flags & VPSF_ALLOWOUTOFBOUNDS)))
+				        clipper.SafeAddClipRange(startAngle, endAngle); // Don't clip if camera allowed out of bounds
 			}
 		}
 	}
@@ -665,6 +686,38 @@ void HWDrawInfo::DoSubsector(subsector_t * sub)
 	if (mClipper->IsBlocked()) return;	// if we are inside a stacked sector portal which hasn't unclipped anything yet.
 
 	fakesector=hw_FakeFlat(sector, in_area, false);
+
+	// cull everything if subsector outside vertical clipper
+	if(sub->polys == nullptr)
+	{
+	        auto &clipperv = *vClipper;
+		int count = sub->numlines;
+		seg_t * seg = sub->firstline;
+		angle_t pitchmin = ANGLE_MAX;
+		angle_t pitchmax = 0;
+		angle_t pitchtemp;
+
+		while (count--)
+		{
+		        if((seg->v1 != nullptr) && (seg->v2 != nullptr))
+			{
+			  // [DVR] Every vertex gets measured twice (since we are cycling through lines/segs). Any way to fix?
+			  // If the ordering of lines is standard and sub is closed polygon, could skip v1 for all lines except first.
+			  // And could entirely skip last line. But some edge cases might ruin it.
+			  pitchtemp = clipperv.PointToPseudoPitch(seg->v1->fX(), seg->v1->fY(), sector->floorplane.ZatPoint(seg->v1));
+			  if(pitchmin > pitchtemp) pitchmin = pitchtemp;
+			  pitchtemp = clipperv.PointToPseudoPitch(seg->v2->fX(), seg->v2->fY(), sector->floorplane.ZatPoint(seg->v2));
+			  if(pitchmin > pitchtemp) pitchmin = pitchtemp;
+			  pitchtemp = clipperv.PointToPseudoPitch(seg->v1->fX(), seg->v1->fY(), sector->ceilingplane.ZatPoint(seg->v1));
+			  if(pitchmax < pitchtemp) pitchmax = pitchtemp;
+			  pitchtemp = clipperv.PointToPseudoPitch(seg->v2->fX(), seg->v2->fY(), sector->ceilingplane.ZatPoint(seg->v2));
+			  if(pitchmax < pitchtemp) pitchmax = pitchtemp;
+			}
+		        seg++;
+		}
+		// Skip subsector if outside vertical clipper
+		if(!clipperv.SafeCheckRange(pitchmin, pitchmax)) return;
+	}
 
 	if (mClipPortal)
 	{
