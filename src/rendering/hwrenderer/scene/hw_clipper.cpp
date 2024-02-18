@@ -405,8 +405,15 @@ angle_t Clipper::PointToPseudoAngle(double x, double y)
 		{
 		        double xproj = disp.XY().Length() * deltaangle(disp.Angle(), viewpoint->Angles.Yaw).Sin();
 			double screenproj = viewpoint->Angles.Pitch.Tan() / viewpoint->camera->ViewPos->Offset.XY().Length();
-			xproj *= screenproj * viewpoint->FieldOfView.Degrees();
-			return AngleToPseudo( DAngle::fromDeg( viewpoint->Angles.Yaw.Degrees() - xproj ).BAMs() );
+			xproj *= screenproj;
+			if (fabs(xproj) <= 1.0)
+			{
+			        return AngleToPseudo( DAngle::fromDeg( viewpoint->Angles.Yaw.Degrees() - xproj  * viewpoint->FieldOfView.Degrees() ).BAMs() );
+			}
+			else
+			{
+			        return AngleToPseudo( DAngle::fromDeg(viewpoint->Angles.Yaw.Degrees() + 180.0).BAMs() );
+			}
 		}
 	}
 	else
@@ -439,8 +446,15 @@ angle_t Clipper::PointToPseudoPitch(double x, double y, double z)
 		  double yproj = viewpoint->PitchSin * disp.XY().Length() * deltaangle(disp.Angle(), viewpoint->Angles.Yaw).Cos();
 		  yproj += viewpoint->PitchCos * disp.Z;
 		  double screenproj = viewpoint->Angles.Pitch.Tan() / viewpoint->camera->ViewPos->Offset.XY().Length();
-		  yproj *= screenproj * viewpoint->FieldOfView.Degrees();
-		  return PitchToPseudo(viewpoint->Angles.Pitch.Degrees() - yproj);
+		  yproj *= screenproj;
+		  if (fabs(yproj) <= 1.0)
+		  {
+		          return PitchToPseudo(viewpoint->Angles.Pitch.Degrees() - yproj * viewpoint->FieldOfView.Degrees() );
+		  }
+		  else
+		  {
+		          return PitchToPseudo(viewpoint->Angles.Pitch.Degrees() + 180.0);
+		  }
 		}
 		else return PitchToPseudo(viewpoint->Angles.Pitch.Degrees());
 	}
