@@ -369,7 +369,7 @@ angle_t Clipper::AngleToPseudo(angle_t ang)
 
 angle_t Clipper::PitchToPseudo(double ang)
 {
-        return AngleToPseudo(DAngle::fromDeg(-1.0*ang).BAMs()); // Pitch is positive when looking down
+        return AngleToPseudo(DAngle::fromDeg(90.0-ang).BAMs()); // Pitch is positive when looking down
 }
 
 //-----------------------------------------------------------------------------
@@ -404,15 +404,17 @@ angle_t Clipper::PointToPseudoAngle(double x, double y)
 		else
 		{
 		        double xproj = disp.XY().Length() * deltaangle(disp.Angle(), viewpoint->Angles.Yaw).Sin();
-			double screenproj = viewpoint->Angles.Pitch.Tan() / viewpoint->camera->ViewPos->Offset.XY().Length();
-			xproj *= screenproj;
-			if (fabs(xproj) <= 1.0)
+			xproj *= viewpoint->ScreenProj;
+			if (fabs(xproj) < 2)
 			{
-			        return AngleToPseudo( DAngle::fromDeg( viewpoint->Angles.Yaw.Degrees() - xproj  * viewpoint->FieldOfView.Degrees() ).BAMs() );
+			        return AngleToPseudo( DAngle::fromDeg( viewpoint->Angles.Yaw.Degrees() - xproj * 0.5 * viewpoint->FieldOfView.Degrees() ).BAMs() );
 			}
 			else
 			{
-			        return AngleToPseudo( DAngle::fromDeg(viewpoint->Angles.Yaw.Degrees() + 180.0).BAMs() );
+		                double a1 = viewpoint->FieldOfView.Degrees();
+				// if (a1 > 89.0) a1 = 89.0;
+				a1 *= ( xproj > 0.0 ? -1.0 : 1.0 );
+			        return AngleToPseudo( DAngle::fromDeg(viewpoint->Angles.Yaw.Degrees() + a1 ).BAMs() );
 			}
 		}
 	}
@@ -445,15 +447,17 @@ angle_t Clipper::PointToPseudoPitch(double x, double y, double z)
 		{
 		  double yproj = viewpoint->PitchSin * disp.XY().Length() * deltaangle(disp.Angle(), viewpoint->Angles.Yaw).Cos();
 		  yproj += viewpoint->PitchCos * disp.Z;
-		  double screenproj = viewpoint->Angles.Pitch.Tan() / viewpoint->camera->ViewPos->Offset.XY().Length();
-		  yproj *= screenproj;
-		  if (fabs(yproj) <= 1.0)
+		  yproj *= viewpoint->ScreenProj;
+		  if (fabs(yproj) <= 1.5)
 		  {
-		          return PitchToPseudo(viewpoint->Angles.Pitch.Degrees() - yproj * viewpoint->FieldOfView.Degrees() );
+		          return PitchToPseudo(viewpoint->Angles.Pitch.Degrees() - yproj * 0.25 * viewpoint->FieldOfView.Degrees() );
 		  }
 		  else
 		  {
-		          return PitchToPseudo(viewpoint->Angles.Pitch.Degrees() + 180.0);
+		          double a2 = 0.75*viewpoint->FieldOfView.Degrees();
+			  // if (a2 > 179.0) a2 = 179.0;
+			  a2 *= ( yproj > 0.0 ? -1.0 : 1.0 );
+			  return PitchToPseudo(viewpoint->Angles.Pitch.Degrees() + a2 );
 		  }
 		}
 		else return PitchToPseudo(viewpoint->Angles.Pitch.Degrees());
@@ -465,7 +469,7 @@ angle_t Clipper::PointToPseudoPitch(double x, double y, double z)
 		{
 		        result = 2.0 - result;
 		}
-		return xs_Fix<30>::ToFix(result); // range to -1 to 1 to 3 (bottom to top to suplex)
+		return xs_Fix<30>::ToFix(result + 1.0); // range to 0 to 2 to 4 (bottom to top to suplex)
 	}
 }
 
@@ -514,3 +518,27 @@ bool Clipper::CheckBox(const float *bspcoord)
 	return SafeCheckRange(angle2, angle1);
 }
 
+bool Clipper::CheckBoxOrthoPitch(const float *bspcoord)
+{
+	angle_t pitchmin, pitchmax;
+	auto &vp = viewpoint;
+	if (!((vp->camera->ViewPos != NULL) && (vp->camera->ViewPos->Flags & VPSF_ORTHOGRAPHIC))) return true;
+
+        angle_t pitchtemp;
+	double padding = 1.0/viewpoint->ScreenProj/viewpoint->PitchCos;
+	double camz = vp->camera->Pos().Z - padding;
+	pitchmin = ANGLE_MAX;
+	pitchmax = 0;
+	for (int yi = BOXTOP; yi <= BOXBOTTOM; yi++)
+	  for (int xi = BOXLEFT; xi <= BOXRIGHT; xi++)
+	  {
+	          pitchtemp = PointToPseudoPitch (bspcoord[xi], bspcoord[yi], camz);
+		  // if((pitchmin > pitchtemp) && (int(pitchmin) > int(pitchtemp))) pitchmin = pitchtemp;
+		  if (pitchmin - pitchtemp < ANGLE_180) pitchmin = pitchtemp;
+		  pitchtemp = PointToPseudoPitch (bspcoord[xi], bspcoord[yi], camz + 2.0*padding);
+		  // if((pitchmax < pitchtemp) && (int(pitchmax) < int(pitchtemp))) pitchmax = pitchtemp;
+		  if (pitchtemp - pitchmax < ANGLE_180) pitchmax = pitchtemp;
+	  }
+
+	return SafeCheckRange(pitchmin, pitchmax);
+}

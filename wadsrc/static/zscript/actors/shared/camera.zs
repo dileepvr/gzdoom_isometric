@@ -154,7 +154,6 @@ class SpectatorCamera : Actor
 
 	void Init(double dist, double yaw, double inpitch, int inflags)
 	{
-	        if(((inflags > 0) && (inflags & VPSF_ORTHOGRAPHIC)) || ((inflags < 0) && (ViewPos.Flags & VPSF_ORTHOGRAPHIC))) dist *= 3.0;
 
 		double zshift = 0.0;
 		if(tracer != NULL)
@@ -164,7 +163,7 @@ class SpectatorCamera : Actor
 		}
 		else if (player != NULL && player.mo != NULL) zshift = -0.5*player.mo.height;
 
-		SetViewPos((-dist*Cos(yaw), -dist*Sin(yaw), dist*Tan(inpitch)+zshift), inflags);
+		SetViewPos((-dist*Cos(yaw)*Cos(inpitch), -dist*Sin(yaw)*Cos(inpitch), dist*Sin(inpitch)+zshift), inflags);
 		LookAtSelf(inpitch);
 	}
 

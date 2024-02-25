@@ -165,7 +165,7 @@ sector_t* RenderViewpoint(FRenderViewpoint& mainvp, AActor* camera, IntRect* bou
 		// Stereo mode specific perspective projection
 		float inv_iso_dist = 1.0f;
 		bool iso_ortho = (camera->ViewPos != NULL) && (camera->ViewPos->Flags & VPSF_ORTHOGRAPHIC);
-		if (iso_ortho && (camera->ViewPos->Offset.XY().Length() > 0)) inv_iso_dist = 3.0f/camera->ViewPos->Offset.XY().Length();
+		if (iso_ortho && (camera->ViewPos->Offset.Length() > 0)) inv_iso_dist = 1.0/camera->ViewPos->Offset.Length();
 		di->VPUniforms.mProjectionMatrix = eye.GetProjection(fov, ratio, fovratio * inv_iso_dist, iso_ortho);
 
 		// Stereo mode specific viewpoint adjustment

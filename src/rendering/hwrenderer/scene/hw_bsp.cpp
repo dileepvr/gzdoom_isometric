@@ -267,27 +267,8 @@ void HWDrawInfo::AddLine (seg_t *seg, bool portalclip)
 	}
 
 	auto &clipper = *mClipper;
-	auto &clipperv = *vClipper;
 	angle_t startAngle = clipper.GetClipAngle(seg->v2);
 	angle_t endAngle = clipper.GetClipAngle(seg->v1);
-	angle_t startPitch = clipperv.PointToPseudoPitch(seg->v1->fX(), seg->v1->fY(), currentsector->floorplane.ZatPoint(seg->v1));
-	angle_t endPitch = clipperv.PointToPseudoPitch(seg->v1->fX(), seg->v1->fY(), currentsector->ceilingplane.ZatPoint(seg->v1));
-	angle_t startPitch2 = clipperv.PointToPseudoPitch(seg->v2->fX(), seg->v2->fY(), currentsector->floorplane.ZatPoint(seg->v2));
-	angle_t endPitch2 = clipperv.PointToPseudoPitch(seg->v2->fX(), seg->v2->fY(), currentsector->ceilingplane.ZatPoint(seg->v2));
-	angle_t temp;
-	// Wall can be tilted from viewpoint perspective. Find vertical extent on screen in psuedopitch units (-1 to 1, bottom to top)
-	if(startPitch > startPitch2)
-	{
-	        temp = startPitch;
-		startPitch = startPitch2;
-		startPitch2 = temp;
-	}
-	if(endPitch > endPitch2)
-	{
-	        temp = endPitch;
-		endPitch = endPitch2;
-		endPitch2 = temp;
-	}
 
 	// Back side, i.e. backface culling	- read: endAngle >= startAngle!
 	if (startAngle-endAngle<ANGLE_180)  
@@ -307,10 +288,36 @@ void HWDrawInfo::AddLine (seg_t *seg, bool portalclip)
 		return;
 	}
 
-	if (!clipper.SafeCheckRange(startAngle, endAngle) || !clipperv.SafeCheckRange(startPitch, endPitch2))
+	if (!clipper.SafeCheckRange(startAngle, endAngle))
 	{
 		return;
 	}
+
+	auto &clipperv = *vClipper;
+	angle_t startPitch = clipperv.PointToPseudoPitch(seg->v1->fX(), seg->v1->fY(), currentsector->floorplane.ZatPoint(seg->v1));
+	angle_t endPitch = clipperv.PointToPseudoPitch(seg->v1->fX(), seg->v1->fY(), currentsector->ceilingplane.ZatPoint(seg->v1));
+	angle_t startPitch2 = clipperv.PointToPseudoPitch(seg->v2->fX(), seg->v2->fY(), currentsector->floorplane.ZatPoint(seg->v2));
+	angle_t endPitch2 = clipperv.PointToPseudoPitch(seg->v2->fX(), seg->v2->fY(), currentsector->ceilingplane.ZatPoint(seg->v2));
+	angle_t temp;
+	// Wall can be tilted from viewpoint perspective. Find vertical extent on screen in psuedopitch units (0 to 2, bottom to top)
+	if(int(startPitch) > int(startPitch2)) // Handle zero crossing
+	{
+	        temp = startPitch; startPitch = startPitch2; startPitch2 = temp; // exchange
+	}
+	if(int(endPitch) > int(endPitch2)) // Handle zero crossing
+	{
+	        temp = endPitch; endPitch = endPitch2; endPitch2 = temp; // exchange
+	}
+	if(int(endPitch2) < int(startPitch))
+	{
+	        temp = endPitch2; endPitch2 = startPitch; startPitch = temp; // exchange
+	}
+
+	if (!clipperv.SafeCheckRange(startPitch, endPitch2))
+	{
+	        return;
+	}
+
 	currentsubsector->flags |= SSECMF_DRAWN;
 
 	uint8_t ispoly = uint8_t(seg->sidedef->Flags & WALLF_POLYOBJ);
@@ -688,35 +695,40 @@ void HWDrawInfo::DoSubsector(subsector_t * sub)
 	fakesector=hw_FakeFlat(sector, in_area, false);
 
 	// cull everything if subsector outside vertical clipper
-	if(sub->polys == nullptr)
+	if (sub->polys == nullptr)
 	{
-	        auto &clipperv = *vClipper;
+	        auto &clipper = *mClipper;
+		auto &clipperv = *vClipper;
 		int count = sub->numlines;
 		seg_t * seg = sub->firstline;
-		angle_t pitchmin = ANGLE_MAX;
-		angle_t pitchmax = 0;
+		bool anglevisible = false;
+		bool pitchvisible = false;
 		angle_t pitchtemp;
+		angle_t pitchmin = ANGLE_90;
+		angle_t pitchmax = 0;
 
 		while (count--)
 		{
 		        if((seg->v1 != nullptr) && (seg->v2 != nullptr))
 			{
-			  // [DVR] Every vertex gets measured twice (since we are cycling through lines/segs). Any way to fix?
-			  // If the ordering of lines is standard and sub is closed polygon, could skip v1 for all lines except first.
-			  // And could entirely skip last line. But some edge cases might ruin it.
-			  pitchtemp = clipperv.PointToPseudoPitch(seg->v1->fX(), seg->v1->fY(), sector->floorplane.ZatPoint(seg->v1));
-			  if(pitchmin > pitchtemp) pitchmin = pitchtemp;
+			  angle_t startAngle = clipper.GetClipAngle(seg->v2);
+			  angle_t endAngle = clipper.GetClipAngle(seg->v1);
+			  if (startAngle-endAngle >= ANGLE_180) anglevisible |= clipper.SafeCheckRange(startAngle, endAngle);
+			  pitchmin = clipperv.PointToPseudoPitch(seg->v1->fX(), seg->v1->fY(), sector->floorplane.ZatPoint(seg->v1));
+			  pitchmax = clipperv.PointToPseudoPitch(seg->v1->fX(), seg->v1->fY(), sector->ceilingplane.ZatPoint(seg->v1));
+			  pitchvisible |= clipperv.SafeCheckRange(pitchmin, pitchmax);
+			  if (pitchvisible && anglevisible) break;
 			  pitchtemp = clipperv.PointToPseudoPitch(seg->v2->fX(), seg->v2->fY(), sector->floorplane.ZatPoint(seg->v2));
-			  if(pitchmin > pitchtemp) pitchmin = pitchtemp;
-			  pitchtemp = clipperv.PointToPseudoPitch(seg->v1->fX(), seg->v1->fY(), sector->ceilingplane.ZatPoint(seg->v1));
-			  if(pitchmax < pitchtemp) pitchmax = pitchtemp;
+			  if (int(pitchmin) > int(pitchtemp)) pitchmin = pitchtemp;
 			  pitchtemp = clipperv.PointToPseudoPitch(seg->v2->fX(), seg->v2->fY(), sector->ceilingplane.ZatPoint(seg->v2));
-			  if(pitchmax < pitchtemp) pitchmax = pitchtemp;
+			  if (int(pitchmax) < int(pitchtemp)) pitchmax = pitchtemp;
+			  pitchvisible |= clipperv.SafeCheckRange(pitchmin, pitchmax);
+			  if (pitchvisible && anglevisible) break;
 			}
 		        seg++;
 		}
-		// Skip subsector if outside vertical clipper
-		if(!clipperv.SafeCheckRange(pitchmin, pitchmax)) return;
+		// Skip subsector if outside vertical or horizontal clippers
+		if(!pitchvisible || !anglevisible) return;
 	}
 
 	if (mClipPortal)
@@ -895,6 +907,14 @@ void HWDrawInfo::RenderBSPNode (void *node)
 		{
 			if (!(no_renderflags[bsp->Index()] & SSRF_SEEN))
 				return;
+		}
+		if ((Viewpoint.camera->ViewPos != NULL) && (Viewpoint.camera->ViewPos->Flags & VPSF_ORTHOGRAPHIC))
+		{
+		        if (!vClipper->CheckBoxOrthoPitch(bsp->bbox[side]))
+			{
+				if (!(no_renderflags[bsp->Index()] & SSRF_SEEN))
+				        return;
+			}
 		}
 
 		node = bsp->children[side];

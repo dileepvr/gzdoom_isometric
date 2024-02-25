@@ -356,13 +356,12 @@ int HWDrawInfo::SetFullbrightFlags(player_t *player)
 angle_t HWDrawInfo::FrustumAngle()
 {
         // If pitch is larger than this you can look all around at an FOV of 90 degrees
-        if (fabs(Viewpoint.HWAngles.Pitch.Degrees()) > 61.0)  return 0xffffffff;
+        if (fabs(Viewpoint.HWAngles.Pitch.Degrees()) > 89.0)  return 0xffffffff;
 
-	double floatangle = 0.5*Viewpoint.FieldOfView.Degrees() * 48.0 / AspectMultiplier(r_viewwindow.WidescreenRatio);
-	double focaltan = tan(floatangle * M_PI / 180);
-	double cospitch = cos(fabs(Viewpoint.HWAngles.Pitch.Radians()) + 0.5*Viewpoint.FieldOfView.Radians());
-	floatangle += atan2 ((1.0-cospitch)*focaltan, cospitch + focaltan*focaltan) * (180 / M_PI);
-	angle_t a1 = DAngle::fromDeg(floatangle).BAMs();
+	double xratio = r_viewwindow.FocalTangent / Viewpoint.PitchCos;
+	double floatangle = 2.0 + atan ( xratio ) * 48.0 / AspectMultiplier(r_viewwindow.WidescreenRatio);
+	angle_t a1 = DAngle::fromRad(floatangle).BAMs();
+
 	if (a1 >= ANGLE_90) return 0xffffffff;
 	return a1;
 }
@@ -444,6 +443,7 @@ void HWDrawInfo::CreateScene(bool drawpsprites)
 	angle_t a1 = FrustumAngle(); // horizontally clip the back of the viewport
 	mClipper->SafeAddClipRangeRealAngles(vp.Angles.Yaw.BAMs() + a1, vp.Angles.Yaw.BAMs() - a1);
 	double a2 = 10.0 + 0.5*Viewpoint.FieldOfView.Degrees(); // FrustumPitch for vertical clipping
+	if (a2 > 179.0) a2 = 179.0;
 	vClipper->SafeAddClipRangeDegPitches(vp.HWAngles.Pitch.Degrees() - a2, vp.HWAngles.Pitch.Degrees() + a2); // clip the suplex range
 
 	// reset the portal manager

@@ -39,6 +39,7 @@ struct FRenderViewpoint
 	AActor			*camera;		// camera actor
 	sector_t		*sector;		// [RH] keep track of sector viewing from
 	DAngle			FieldOfView;	// current field of view
+        double                  ScreenProj;             // Screen projection factor for orthographic projection
 
 	double			TicFrac;		// fraction of tic for interpolation
 	uint32_t		FrameTime;		// current frame's time in tics.

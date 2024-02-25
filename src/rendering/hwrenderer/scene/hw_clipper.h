@@ -156,6 +156,7 @@ public:
     angle_t PointToPseudoPitch(double x, double y, double z);
 
 	bool CheckBox(const float *bspcoord);
+        bool CheckBoxOrthoPitch(const float *bspcoord);
 
 	// Used to speed up angle calculations during clipping
 	inline angle_t GetClipAngle(vertex_t *v)
