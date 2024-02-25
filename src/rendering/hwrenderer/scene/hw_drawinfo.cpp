@@ -131,12 +131,15 @@ HWDrawInfo *HWDrawInfo::StartDrawInfo(FLevelLocals *lev, HWDrawInfo *parent, FRe
 //==========================================================================
 
 static Clipper staticClipper;		// Since all scenes are processed sequentially we only need one clipper.
+static Clipper staticVClipper;		// Another clipper to clip vertically (used if (VPSF_ALLOWOUTOFBOUNDS & camera->viewpos->Flags)).
 static HWDrawInfo * gl_drawinfo;	// This is a linked list of all active DrawInfos and needed to free the memory arena after the last one goes out of scope.
 
 void HWDrawInfo::StartScene(FRenderViewpoint &parentvp, HWViewpointUniforms *uniforms)
 {
 	staticClipper.Clear();
+	staticVClipper.Clear();
 	mClipper = &staticClipper;
+	vClipper = &staticVClipper;
 
 	Viewpoint = parentvp;
 	lightmode = getRealLightmode(Level, true);
@@ -169,6 +172,7 @@ void HWDrawInfo::StartScene(FRenderViewpoint &parentvp, HWViewpointUniforms *uni
 		VPUniforms.mLightBlendMode = (level.info ? (int)level.info->lightblendmode : 0);
 	}
 	mClipper->SetViewpoint(Viewpoint);
+	vClipper->SetViewpoint(Viewpoint);
 
 	ClearBuffers();
 
@@ -351,16 +355,14 @@ int HWDrawInfo::SetFullbrightFlags(player_t *player)
 
 angle_t HWDrawInfo::FrustumAngle()
 {
-	float tilt = fabs(Viewpoint.HWAngles.Pitch.Degrees());
+        // If pitch is larger than this you can look all around at an FOV of 90 degrees
+        if (fabs(Viewpoint.HWAngles.Pitch.Degrees()) > 75.0)  return 0xffffffff;
 
-	// If the pitch is larger than this you can look all around at a FOV of 90°
-	if (tilt > 46.0f) return 0xffffffff;
+	double xratio = r_viewwindow.FocalTangent / Viewpoint.PitchCos;
+	double floatangle = 2.0 + atan ( xratio ) * 48.0 / AspectMultiplier(r_viewwindow.WidescreenRatio);
+	angle_t a1 = DAngle::fromRad(floatangle).BAMs();
 
-	// ok, this is a gross hack that barely works...
-	// but at least it doesn't overestimate too much...
-	double floatangle = 2.0 + (45.0 + ((tilt / 1.9)))*Viewpoint.FieldOfView.Degrees() * 48.0 / AspectMultiplier(r_viewwindow.WidescreenRatio) / 90.0;
-	angle_t a1 = DAngle::fromDeg(floatangle).BAMs();
-	if (a1 >= ANGLE_180) return 0xffffffff;
+	if (a1 >= ANGLE_90) return 0xffffffff;
 	return a1;
 }
 
@@ -438,8 +440,11 @@ HWDecal *HWDrawInfo::AddDecal(bool onmirror)
 void HWDrawInfo::CreateScene(bool drawpsprites)
 {
 	const auto &vp = Viewpoint;
-	angle_t a1 = FrustumAngle();
+	angle_t a1 = FrustumAngle(); // horizontally clip the back of the viewport
 	mClipper->SafeAddClipRangeRealAngles(vp.Angles.Yaw.BAMs() + a1, vp.Angles.Yaw.BAMs() - a1);
+	double a2 = 10.0 + 0.5*Viewpoint.FieldOfView.Degrees(); // FrustumPitch for vertical clipping
+	if (a2 > 179.0) a2 = 179.0;
+	vClipper->SafeAddClipRangeDegPitches(vp.HWAngles.Pitch.Degrees() - a2, vp.HWAngles.Pitch.Degrees() + a2); // clip the suplex range
 
 	// reset the portal manager
 	portalState.StartFrame();

@@ -66,6 +66,7 @@
 #include "i_system.h"
 #include "v_draw.h"
 #include "i_interface.h"
+#include "d_main.h"
 
 // EXTERNAL DATA DECLARATIONS ----------------------------------------------
 
@@ -153,9 +154,12 @@ FRenderViewpoint::FRenderViewpoint()
 	Sin = 0.0;
 	TanCos = 0.0;
 	TanSin = 0.0;
+	PitchCos = 0.0;
+	PitchSin = 0.0;
 	camera = nullptr;
 	sector = nullptr;
 	FieldOfView =  DAngle::fromDeg(90.); // Angles in the SCREENWIDTH wide window
+	ScreenProj = 0.0;
 	TicFrac = 0.0;
 	FrameTime = 0;
 	extralight = 0;
@@ -630,10 +634,16 @@ void FRenderViewpoint::SetViewAngle (const FViewWindow &viewwindow)
 	TanSin = viewwindow.FocalTangent * Sin;
 	TanCos = viewwindow.FocalTangent * Cos;
 
+	PitchSin = Angles.Pitch.Sin();
+	PitchCos = Angles.Pitch.Cos();
+
 	DVector2 v = Angles.Yaw.ToVector();
 	ViewVector.X = v.X;
 	ViewVector.Y = v.Y;
 	HWAngles.Yaw = FAngle::fromDeg(270.0 - Angles.Yaw.Degrees());
+
+	if ((camera->ViewPos != NULL) && (camera->ViewPos->Flags & VPSF_ORTHOGRAPHIC) && (camera->ViewPos->Offset.XY().Length() > 0.0))
+	  ScreenProj = 1.34396 / camera->ViewPos->Offset.Length(); // [DVR] Estimated. +/-1 should be top/bottom of screen.
 
 }
 
@@ -945,7 +955,11 @@ void R_SetupFrame (FRenderViewpoint &viewpoint, FViewWindow &viewwindow, AActor 
 					// Interpolation still happens with everything else though and seems to work fine.
 					DefaultDraw = false;
 					viewpoint.NoPortalPath = true;
-					P_AdjustViewPos(mo, orig, next, viewpoint.sector, unlinked, VP, &viewpoint);
+					// Allow VPSF_ALLOWOUTOFBOUNDS camera viewpoints to go out of bounds when using HW renderer
+					if (!(VP->Flags & VPSF_ALLOWOUTOFBOUNDS) || !V_IsHardwareRenderer())
+					{
+					        P_AdjustViewPos(mo, orig, next, viewpoint.sector, unlinked, VP, &viewpoint);
+					}
 					
 					if (viewpoint.sector->PortalGroup != oldsector->PortalGroup || (unlinked && ((iview->New.Pos.XY() - iview->Old.Pos.XY()).LengthSquared()) > 256 * 256))
 					{
@@ -1003,7 +1017,10 @@ void R_SetupFrame (FRenderViewpoint &viewpoint, FViewWindow &viewwindow, AActor 
 	viewpoint.SetViewAngle (viewwindow);
 
 	// Keep the view within the sector's floor and ceiling
-	if (viewpoint.sector->PortalBlocksMovement(sector_t::ceiling))
+	// But allow VPSF_ALLOWOUTOFBOUNDS camera viewpoints to go out of bounds when using hardware renderer
+	bool disembodied = false;
+	if (viewpoint.camera->ViewPos != NULL) disembodied = viewpoint.camera->ViewPos->Flags & VPSF_ALLOWOUTOFBOUNDS;
+	if (viewpoint.sector->PortalBlocksMovement(sector_t::ceiling) && (!disembodied || !V_IsHardwareRenderer()))
 	{
 		double theZ = viewpoint.sector->ceilingplane.ZatPoint(viewpoint.Pos) - 4;
 		if (viewpoint.Pos.Z > theZ)
@@ -1012,7 +1029,7 @@ void R_SetupFrame (FRenderViewpoint &viewpoint, FViewWindow &viewwindow, AActor 
 		}
 	}
 
-	if (viewpoint.sector->PortalBlocksMovement(sector_t::floor))
+	if (viewpoint.sector->PortalBlocksMovement(sector_t::floor) && (!disembodied || !V_IsHardwareRenderer()))
 	{
 		double theZ = viewpoint.sector->floorplane.ZatPoint(viewpoint.Pos) + 4;
 		if (viewpoint.Pos.Z < theZ)

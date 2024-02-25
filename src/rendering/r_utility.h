@@ -33,10 +33,13 @@ struct FRenderViewpoint
 	double			Sin;			// sin(Angles.Yaw)
 	double			TanCos;			// FocalTangent * cos(Angles.Yaw)
 	double			TanSin;			// FocalTangent * sin(Angles.Yaw)
+	double			PitchCos;		// cos(Angles.Pitch)
+        double			PitchSin;		// sin(Angles.Pitch)
 
 	AActor			*camera;		// camera actor
 	sector_t		*sector;		// [RH] keep track of sector viewing from
 	DAngle			FieldOfView;	// current field of view
+        double                  ScreenProj;             // Screen projection factor for orthographic projection
 
 	double			TicFrac;		// fraction of tic for interpolation
 	uint32_t		FrameTime;		// current frame's time in tics.
