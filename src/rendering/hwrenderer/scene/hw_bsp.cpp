@@ -308,10 +308,6 @@ void HWDrawInfo::AddLine (seg_t *seg, bool portalclip)
 	{
 	        temp = endPitch; endPitch = endPitch2; endPitch2 = temp; // exchange
 	}
-	if(int(endPitch2) < int(startPitch))
-	{
-	        temp = endPitch2; endPitch2 = startPitch; startPitch = temp; // exchange
-	}
 
 	if (!clipperv.SafeCheckRange(startPitch, endPitch2))
 	{

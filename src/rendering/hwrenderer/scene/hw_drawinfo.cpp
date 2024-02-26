@@ -356,7 +356,7 @@ int HWDrawInfo::SetFullbrightFlags(player_t *player)
 angle_t HWDrawInfo::FrustumAngle()
 {
         // If pitch is larger than this you can look all around at an FOV of 90 degrees
-        if (fabs(Viewpoint.HWAngles.Pitch.Degrees()) > 75.0)  return 0xffffffff;
+        if (fabs(Viewpoint.HWAngles.Pitch.Degrees()) > 89.0)  return 0xffffffff;
 
 	double xratio = r_viewwindow.FocalTangent / Viewpoint.PitchCos;
 	double floatangle = 2.0 + atan ( xratio ) * 48.0 / AspectMultiplier(r_viewwindow.WidescreenRatio);
