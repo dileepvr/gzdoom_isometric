@@ -156,6 +156,8 @@ FRenderViewpoint::FRenderViewpoint()
 	TanSin = 0.0;
 	PitchCos = 0.0;
 	PitchSin = 0.0;
+        floordistfact = 0.0;
+	cotfloor = 0.0;
 	camera = nullptr;
 	sector = nullptr;
 	FieldOfView =  DAngle::fromDeg(90.); // Angles in the SCREENWIDTH wide window
@@ -636,6 +638,9 @@ void FRenderViewpoint::SetViewAngle (const FViewWindow &viewwindow)
 
 	PitchSin = Angles.Pitch.Sin();
 	PitchCos = Angles.Pitch.Cos();
+
+        floordistfact = M_SQRT2 + ( fabs(Cos) > fabs(Sin) ? 1.0/fabs(Cos) : 1.0/fabs(Sin) );
+	cotfloor = ( fabs(Cos) > fabs(Sin) ? fabs(Sin/Cos) : fabs(Cos/Sin) );
 
 	DVector2 v = Angles.Yaw.ToVector();
 	ViewVector.X = v.X;

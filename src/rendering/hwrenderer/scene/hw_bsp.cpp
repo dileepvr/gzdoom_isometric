@@ -420,6 +420,8 @@ void HWDrawInfo::PolySubsector(subsector_t * sub)
 
 void HWDrawInfo::RenderPolyBSPNode (void *node)
 {
+        if(!mClipper->SafeCheckRange(0, ANGLE_MAX)) return; // Screen is filled (horizontal clipper)
+
 	while (!((size_t)node & 1))  // Keep going until found a subsector
 	{
 		node_t *bsp = (node_t *)node;
@@ -557,6 +559,7 @@ void HWDrawInfo::RenderThings(subsector_t * sub, sector_t * sector)
 		if (thing->validcount == validcount) continue;
 		thing->validcount = validcount;
 
+		if((Viewpoint.camera->ViewPos != NULL) && (Viewpoint.camera->ViewPos->Flags & VPSF_ALLOWOUTOFBOUNDS) && thing->Sector->isSecret() && thing->Sector->wasSecret()) continue; // This covers things that are touching non-secret sectors
 		FIntCVar *cvar = thing->GetInfo()->distancecheck;
 		if (cvar != nullptr && *cvar >= 0)
 		{
@@ -689,6 +692,8 @@ void HWDrawInfo::DoSubsector(subsector_t * sub)
 	if (mClipper->IsBlocked()) return;	// if we are inside a stacked sector portal which hasn't unclipped anything yet.
 
 	fakesector=hw_FakeFlat(sector, in_area, false);
+
+	if((Viewpoint.camera->ViewPos != NULL) && (Viewpoint.camera->ViewPos->Flags & VPSF_ALLOWOUTOFBOUNDS) && sector->isSecret() && sector->wasSecret()) return;
 
 	// cull everything if subsector outside vertical clipper
 	if (sub->polys == nullptr)
@@ -880,6 +885,8 @@ void HWDrawInfo::DoSubsector(subsector_t * sub)
 
 void HWDrawInfo::RenderBSPNode (void *node)
 {
+        if(!mClipper->SafeCheckRange(0, ANGLE_MAX)) return; // Screen is filled (horizontal clipper)
+
 	if (Level->nodes.Size() == 0)
 	{
 		DoSubsector (&Level->subsectors[0]);

@@ -33,8 +33,10 @@ struct FRenderViewpoint
 	double			Sin;			// sin(Angles.Yaw)
 	double			TanCos;			// FocalTangent * cos(Angles.Yaw)
 	double			TanSin;			// FocalTangent * sin(Angles.Yaw)
-	double			PitchCos;			// cos(Angles.Pitch)
-	double			PitchSin;			// sin(Angles.Pitch)
+	double			PitchCos;		// cos(Angles.Pitch)
+	double			PitchSin;		// sin(Angles.Pitch)
+        double                  floordistfact;          // used for isometric sprites Y-billboarding compensation in hw_sprites.cpp
+        double                  cotfloor;               // used for isometric sprites Y-billboarding compensation in hw_sprites.cpp
 
 	AActor			*camera;		// camera actor
 	sector_t		*sector;		// [RH] keep track of sector viewing from

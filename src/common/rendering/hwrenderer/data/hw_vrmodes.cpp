@@ -152,7 +152,7 @@ VSMatrix VREyeInfo::GetProjection(float fov, float aspectRatio, float fovRatio, 
 
 	if (iso_ortho) // Orthographic projection for isometric viewpoint
 	{
-		double zNear = -2.0/fovRatio; // screen->GetZNear();
+		double zNear = -3.0/fovRatio; // screen->GetZNear();
 		double zFar = screen->GetZFar();
 
 		double fH = tan(DEG2RAD(fov) / 2) / fovRatio;

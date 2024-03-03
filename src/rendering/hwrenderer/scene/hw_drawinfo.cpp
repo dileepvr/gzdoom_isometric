@@ -442,7 +442,7 @@ void HWDrawInfo::CreateScene(bool drawpsprites)
 	const auto &vp = Viewpoint;
 	angle_t a1 = FrustumAngle(); // horizontally clip the back of the viewport
 	mClipper->SafeAddClipRangeRealAngles(vp.Angles.Yaw.BAMs() + a1, vp.Angles.Yaw.BAMs() - a1);
-	double a2 = 10.0 + 0.5*Viewpoint.FieldOfView.Degrees(); // FrustumPitch for vertical clipping
+	double a2 = 20.0 + 0.5*Viewpoint.FieldOfView.Degrees(); // FrustumPitch for vertical clipping
 	if (a2 > 179.0) a2 = 179.0;
 	vClipper->SafeAddClipRangeDegPitches(vp.HWAngles.Pitch.Degrees() - a2, vp.HWAngles.Pitch.Degrees() + a2); // clip the suplex range
 

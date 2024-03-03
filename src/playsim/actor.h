@@ -500,6 +500,7 @@ enum ActorRenderFlag2
 	RF2_BILLBOARDNOFACECAMERA	= 0x0008,	// Sprite billboard face camera angle (override gl_billboard_faces_camera)
 	RF2_FLIPSPRITEOFFSETX		= 0x0010,
 	RF2_FLIPSPRITEOFFSETY		= 0x0020,
+	RF2_ISOMETRICSPRITES		= 0x0080,
 };
 
 // This translucency value produces the closest match to Heretic's TINTTAB.
@@ -694,7 +695,6 @@ enum EViewPosFlags // [MC] Flags for SetViewPos.
 	VPSF_ABSOLUTEPOS =		1 << 2,			// Use absolute position.
 	VPSF_ALLOWOUTOFBOUNDS =		1 << 3,			// Allow viewpoint to go out of bounds (hardware renderer only).
 	VPSF_ORTHOGRAPHIC =		1 << 4,			// Use orthographic projection.
-	VPSF_ISOMETRICSPRITES =		1 << 5,			// Displace sprites towards camera and don't billboard (drawn from isometric perspective).
 };
 
 enum EAnimOverrideFlags
@@ -1106,6 +1106,8 @@ public:
 
 	DAngle			SpriteAngle;
 	DAngle			SpriteRotation;
+        float                   isoscaleY;              // Y-scale to compensate for Y-billboarding for isometric sprites
+        float                   isotheta;               // Rotation angle to compensate for Y-billboarding for isometric sprites
 	DRotator		Angles;
 	DRotator		ViewAngles;			// Angle offsets for cameras
 	TObjPtr<DViewPosition*> ViewPos;			// Position offsets for cameras
