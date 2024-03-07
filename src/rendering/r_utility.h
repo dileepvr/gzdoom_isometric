@@ -37,6 +37,7 @@ struct FRenderViewpoint
 	double			PitchSin;		// sin(Angles.Pitch)
         double                  floordistfact;          // used for isometric sprites Y-billboarding compensation in hw_sprites.cpp
         double                  cotfloor;               // used for isometric sprites Y-billboarding compensation in hw_sprites.cpp
+        angle_t                 FrustAngle;             // FrustumAngle() result
 
 	AActor			*camera;		// camera actor
 	sector_t		*sector;		// [RH] keep track of sector viewing from

@@ -154,6 +154,8 @@ public:
     
     angle_t PointToPseudoAngle(double x, double y);
     angle_t PointToPseudoPitch(double x, double y, double z);
+    angle_t PointToPseudoOrthoAngle(double x, double y);
+    angle_t PointToPseudoOrthoPitch(double x, double y, double z);
 
 	bool CheckBox(const float *bspcoord);
         bool CheckBoxOrthoPitch(const float *bspcoord);
