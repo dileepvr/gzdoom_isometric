@@ -261,7 +261,9 @@ void HWDrawInfo::ClearBuffers()
 
 void HWDrawInfo::UpdateCurrentMapSection()
 {
-	const int mapsection = Level->PointInRenderSubsector(Viewpoint.Pos)->mapsection;
+        int mapsection = Level->PointInRenderSubsector(Viewpoint.Pos)->mapsection;
+	if ((Viewpoint.camera->ViewPos != NULL) && (Viewpoint.camera->ViewPos->Flags & VPSF_ALLOWOUTOFBOUNDS))
+	        mapsection = Level->PointInRenderSubsector(Viewpoint.camera->Pos())->mapsection;
 	CurrentMapSections.Set(mapsection);
 }
 
@@ -870,6 +872,8 @@ void HWDrawInfo::ProcessScene(bool toscreen)
 	portalState.BeginScene();
 
 	int mapsection = Level->PointInRenderSubsector(Viewpoint.Pos)->mapsection;
+	if ((Viewpoint.camera->ViewPos != NULL) && (Viewpoint.camera->ViewPos->Flags & VPSF_ALLOWOUTOFBOUNDS))
+	        mapsection = Level->PointInRenderSubsector(Viewpoint.camera->Pos())->mapsection;
 	CurrentMapSections.Set(mapsection);
 	DrawScene(toscreen ? DM_MAINVIEW : DM_OFFSCREEN);
 
