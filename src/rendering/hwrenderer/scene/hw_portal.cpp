@@ -167,7 +167,7 @@ bool FPortalSceneState::RenderFirstSkyPortal(int recursion, HWDrawInfo *outer_di
 
 void FPortalSceneState::RenderPortal(HWPortal *p, FRenderState &state, bool usestencil, HWDrawInfo *outer_di)
 {
-	if (gl_portals) outer_di->RenderPortal(p, state, usestencil);
+        if (gl_portals && !(outer_di->Viewpoint.camera->ViewPos && (outer_di->Viewpoint.camera->ViewPos->Flags & VPSF_ORTHOGRAPHIC))) outer_di->RenderPortal(p, state, usestencil);
 }
 
 
