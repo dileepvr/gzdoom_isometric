@@ -320,7 +320,7 @@ void HWFlat::DrawFlat(HWDrawInfo *di, FRenderState &state, bool translucent)
 	state.SetObjectColor(FlatColor | 0xff000000);
 	state.SetAddColor(AddColor | 0xff000000);
 	state.ApplyTextureManipulation(TextureFx);
-
+	if (plane.plane.dithertransflag) state.SetEffect(EFF_DITHERTRANS);
 
 	if (hacktype & SSRF_PLANEHACK)
 	{
@@ -372,6 +372,7 @@ void HWFlat::DrawFlat(HWDrawInfo *di, FRenderState &state, bool translucent)
 	state.SetObjectColor(0xffffffff);
 	state.SetAddColor(0);
 	state.ApplyTextureManipulation(nullptr);
+	if (plane.plane.dithertransflag) state.SetEffect(EFF_NONE);
 }
 
 //==========================================================================
@@ -408,6 +409,8 @@ inline void HWFlat::PutFlat(HWDrawInfo *di, bool fog)
 void HWFlat::Process(HWDrawInfo *di, sector_t * model, int whichplane, bool fog)
 {
 	plane.GetFromSector(model, whichplane);
+	model->ceilingplane.dithertransflag = false; // Resetting this every frame
+	model->floorplane.dithertransflag = false; // Resetting this every frame
 	if (whichplane != int(ceiling))
 	{
 		// Flip the normal if the source plane has a different orientation than what we are about to render.

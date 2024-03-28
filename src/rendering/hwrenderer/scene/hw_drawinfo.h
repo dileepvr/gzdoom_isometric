@@ -304,6 +304,8 @@ public:
 	void DrawCoronas(FRenderState& state);
 	void DrawCorona(FRenderState& state, ACorona* corona, double dist);
 
+        void SetDitherTransFlags(AActor* actor);
+
 	void ProcessLowerMinisegs(TArray<seg_t *> &lowersegs);
     void AddSubsectorToPortal(FSectorPortalGroup *portal, subsector_t *sub);
     

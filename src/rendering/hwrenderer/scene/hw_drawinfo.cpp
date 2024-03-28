@@ -663,6 +663,72 @@ void HWDrawInfo::DrawCorona(FRenderState& state, ACorona* corona, double dist)
 #endif
 }
 
+//==========================================================================
+//
+// TraceCallbackForDitherTransparency
+// Toggles dither flag on anything that occludes the actor's
+// position from viewpoint.
+//
+//==========================================================================
+
+static ETraceStatus TraceCallbackForDitherTransparency(FTraceResults& res, void* userdata)
+{
+        int* count = (int*)userdata;
+	double bf, bc;
+	(*count)++;
+        switch(res.HitType)
+	{
+	case TRACE_HitWall:
+	  bf = res.Line->sidedef[res.Side]->sector->floorplane.ZatPoint(res.HitPos.XY());
+	  bc = res.Line->sidedef[res.Side]->sector->ceilingplane.ZatPoint(res.HitPos.XY());
+	  if ((res.HitPos.Z <= bc) && (res.HitPos.Z >= bf)) res.Line->sidedef[res.Side]->Flags |= WALLF_DITHERTRANS;
+	  break;
+	case TRACE_HitFloor:
+	  res.Sector->floorplane.dithertransflag = true;
+	  break;
+	case TRACE_HitCeiling:
+	  res.Sector->ceilingplane.dithertransflag = true;
+	  break;
+	case TRACE_HitActor:
+	default:
+	  break;
+	}
+
+	return TRACE_ContinueOutOfBounds;
+}
+
+
+void HWDrawInfo::SetDitherTransFlags(AActor* actor)
+{
+        if (actor && actor->Sector && (Viewpoint.camera->ViewPos != NULL) && (Viewpoint.camera->ViewPos->Flags & VPSF_ALLOWOUTOFBOUNDS))
+	{
+	        FTraceResults results;
+		double horix = Viewpoint.Sin * actor->radius;
+		double horiy = Viewpoint.Cos * actor->radius;
+		DVector3 actorpos = actor->Pos();
+		DVector3 vvec = actorpos - Viewpoint.Pos;
+		if (Viewpoint.camera->ViewPos->Flags & VPSF_ORTHOGRAPHIC) vvec += Viewpoint.camera->Pos() - actorpos;
+		double distance = vvec.Length() - actor->radius;
+		DVector3 campos = actorpos - vvec;
+		sector_t* startsec;
+		int count = 0;
+
+		vvec = vvec.Unit();
+		campos.X -= horix; campos.Y += horiy; campos.Z += actor->Height * 0.25;
+		for (int iter = 0; iter < 3; iter++)
+		{
+			startsec = Level->PointInRenderSubsector(campos)->sector;
+			Trace(campos, startsec, vvec, distance,
+			      MF_SOLID, ML_BLOCKEVERYTHING, actor, results, 0, TraceCallbackForDitherTransparency, &count);
+			campos.Z += actor->Height * 0.5;
+			Trace(campos, startsec, vvec, distance,
+			      MF_SOLID, ML_BLOCKEVERYTHING, actor, results, 0, TraceCallbackForDitherTransparency, &count);
+			campos.Z -= actor->Height * 0.5;
+			campos.X += horix; campos.Y -= horiy;
+		}
+	}
+}
+
 static ETraceStatus CheckForViewpointActor(FTraceResults& res, void* userdata)
 {
 	FRenderViewpoint* data = (FRenderViewpoint*)userdata;
@@ -825,6 +891,10 @@ void HWDrawInfo::DrawScene(int drawmode)
 	{
 		ssao_portals_available = gl_ssao_portals;
 		applySSAO = true;
+		if (r_dithertransparency)
+		{
+		        vp.camera->tracer ? SetDitherTransFlags(vp.camera->tracer) : SetDitherTransFlags(players[consoleplayer].mo);
+		}
 	}
 	else if (drawmode == DM_OFFSCREEN)
 	{
