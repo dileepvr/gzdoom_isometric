@@ -389,12 +389,25 @@ angle_t Clipper::PointToPseudoAngle(double x, double y)
 {
 	double vecx = x - viewpoint->Pos.X;
 	double vecy = y - viewpoint->Pos.Y;
+	if ((viewpoint->camera != NULL) && amRadar)
+	{
+	        if (viewpoint->camera->tracer != NULL)
+		{
+		        vecx = x - viewpoint->camera->tracer->X();
+			vecy = y - viewpoint->camera->tracer->Y();
+		}
+		else
+		{
+		        vecx = x - viewpoint->camera->X();
+			vecy = y - viewpoint->camera->Y();
+		}
+	}
 
 	if (vecx == 0 && vecy == 0)
 	{
 		return 0;
 	}
-	else if ((viewpoint->camera->ViewPos != NULL) && (viewpoint->camera->ViewPos->Flags & VPSF_ORTHOGRAPHIC))
+	else if (!amRadar && (viewpoint->camera->ViewPos != NULL) && (viewpoint->camera->ViewPos->Flags & VPSF_ORTHOGRAPHIC))
 	{
 	        return PointToPseudoOrthoAngle(x, y);
 	}

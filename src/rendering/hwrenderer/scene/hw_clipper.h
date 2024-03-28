@@ -42,6 +42,7 @@ class Clipper
 
 public:
 
+        bool amRadar = false;
 	Clipper();
 
 	void Clear();

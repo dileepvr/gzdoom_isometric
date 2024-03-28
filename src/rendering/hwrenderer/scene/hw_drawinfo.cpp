@@ -132,14 +132,18 @@ HWDrawInfo *HWDrawInfo::StartDrawInfo(FLevelLocals *lev, HWDrawInfo *parent, FRe
 
 static Clipper staticClipper;		// Since all scenes are processed sequentially we only need one clipper.
 static Clipper staticVClipper;		// Another clipper to clip vertically (used if (VPSF_ALLOWOUTOFBOUNDS & camera->viewpos->Flags)).
+static Clipper staticRClipper;		// Another clipper for radar (doesn't actually clip. Changes SSECMF_DRAWN setting).
 static HWDrawInfo * gl_drawinfo;	// This is a linked list of all active DrawInfos and needed to free the memory arena after the last one goes out of scope.
 
 void HWDrawInfo::StartScene(FRenderViewpoint &parentvp, HWViewpointUniforms *uniforms)
 {
 	staticClipper.Clear();
 	staticVClipper.Clear();
+	staticRClipper.Clear();
 	mClipper = &staticClipper;
 	vClipper = &staticVClipper;
+	rClipper = &staticRClipper;
+	rClipper->amRadar = true;
 
 	Viewpoint = parentvp;
 	lightmode = getRealLightmode(Level, true);
@@ -173,6 +177,7 @@ void HWDrawInfo::StartScene(FRenderViewpoint &parentvp, HWViewpointUniforms *uni
 	}
 	mClipper->SetViewpoint(Viewpoint);
 	vClipper->SetViewpoint(Viewpoint);
+	rClipper->SetViewpoint(Viewpoint);
 
 	ClearBuffers();
 

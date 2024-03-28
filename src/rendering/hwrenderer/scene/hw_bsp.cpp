@@ -51,6 +51,7 @@
 CVAR(Bool, gl_multithread, true, CVAR_ARCHIVE | CVAR_GLOBALCONFIG)
 
 EXTERN_CVAR(Float, r_actorspriteshadowdist)
+EXTERN_CVAR(Bool, r_radarclipper)
 
 thread_local bool isWorkerThread;
 ctpl::thread_pool renderPool(1);
@@ -269,6 +270,20 @@ void HWDrawInfo::AddLine (seg_t *seg, bool portalclip)
 	auto &clipper = *mClipper;
 	angle_t startAngle = clipper.GetClipAngle(seg->v2);
 	angle_t endAngle = clipper.GetClipAngle(seg->v1);
+	auto &clipperr = *rClipper;
+	angle_t startAngleR = clipperr.PointToPseudoAngle(seg->v2->fX(), seg->v2->fY());
+	angle_t endAngleR = clipperr.PointToPseudoAngle(seg->v1->fX(), seg->v1->fY());
+
+	if(r_radarclipper && !(Level->flags3 & LEVEL3_NOFOGOFWAR) && (startAngleR - endAngleR >= ANGLE_180))
+	{
+	        if (!seg->backsector) clipperr.SafeAddClipRange(startAngleR, endAngleR);
+		else if((seg->sidedef != nullptr) && !uint8_t(seg->sidedef->Flags & WALLF_POLYOBJ) && (currentsector->sectornum != seg->backsector->sectornum))
+		{
+		        if (in_area == area_default) in_area = hw_CheckViewArea(seg->v2, seg->v1, seg->frontsector, seg->backsector);
+			backsector = hw_FakeFlat(seg->backsector, in_area, true);
+			if (hw_CheckClip(seg->sidedef, currentsector, backsector)) clipperr.SafeAddClipRange(startAngleR, endAngleR);
+		}
+	}
 
 	// Back side, i.e. backface culling	- read: endAngle >= startAngle!
 	if (startAngle-endAngle<ANGLE_180)  
@@ -280,9 +295,13 @@ void HWDrawInfo::AddLine (seg_t *seg, bool portalclip)
 	{
 		if (!(currentsubsector->flags & SSECMF_DRAWN))
 		{
-			if (clipper.SafeCheckRange(startAngle, endAngle)) 
+		        if (clipper.SafeCheckRange(startAngle, endAngle) && (!r_radarclipper || (Level->flags3 & LEVEL3_NOFOGOFWAR)))
 			{
-				currentsubsector->flags |= SSECMF_DRAWN;
+			  currentsubsector->flags |= SSECMF_DRAWN;
+			}
+			if ((r_radarclipper || !(Level->flags3 & LEVEL3_NOFOGOFWAR)) && clipperr.SafeCheckRange(startAngleR, endAngleR))
+			{
+			  currentsubsector->flags |= SSECMF_DRAWN;
 			}
 		}
 		return;
@@ -314,7 +333,8 @@ void HWDrawInfo::AddLine (seg_t *seg, bool portalclip)
 	        return;
 	}
 
-	currentsubsector->flags |= SSECMF_DRAWN;
+	if (!r_radarclipper || (Level->flags3 & LEVEL3_NOFOGOFWAR) || clipperr.SafeCheckRange(startAngleR, endAngleR))
+	        currentsubsector->flags |= SSECMF_DRAWN;
 
 	uint8_t ispoly = uint8_t(seg->sidedef->Flags & WALLF_POLYOBJ);
 
@@ -698,10 +718,12 @@ void HWDrawInfo::DoSubsector(subsector_t * sub)
 	{
 	        auto &clipper = *mClipper;
 		auto &clipperv = *vClipper;
+		auto &clipperr = *rClipper;
 		int count = sub->numlines;
 		seg_t * seg = sub->firstline;
 		bool anglevisible = false;
 		bool pitchvisible = false;
+		bool radarvisible = false;
 		angle_t pitchtemp;
 		angle_t pitchmin = ANGLE_90;
 		angle_t pitchmax = 0;
@@ -713,21 +735,25 @@ void HWDrawInfo::DoSubsector(subsector_t * sub)
 			  angle_t startAngle = clipper.GetClipAngle(seg->v2);
 			  angle_t endAngle = clipper.GetClipAngle(seg->v1);
 			  if (startAngle-endAngle >= ANGLE_180) anglevisible |= clipper.SafeCheckRange(startAngle, endAngle);
+			  angle_t startAngleR = clipperr.PointToPseudoAngle(seg->v2->fX(), seg->v2->fY());
+			  angle_t endAngleR = clipperr.PointToPseudoAngle(seg->v1->fX(), seg->v1->fY());
+			  if (startAngleR-endAngleR >= ANGLE_180)
+			    radarvisible |= (clipperr.SafeCheckRange(startAngleR, endAngleR) || (Level->flags3 & LEVEL3_NOFOGOFWAR) || ((sub->flags & SSECMF_DRAWN) && !multiplayer));
 			  pitchmin = clipperv.PointToPseudoPitch(seg->v1->fX(), seg->v1->fY(), sector->floorplane.ZatPoint(seg->v1));
 			  pitchmax = clipperv.PointToPseudoPitch(seg->v1->fX(), seg->v1->fY(), sector->ceilingplane.ZatPoint(seg->v1));
 			  pitchvisible |= clipperv.SafeCheckRange(pitchmin, pitchmax);
-			  if (pitchvisible && anglevisible) break;
+			  if (pitchvisible && anglevisible && radarvisible) break;
 			  pitchtemp = clipperv.PointToPseudoPitch(seg->v2->fX(), seg->v2->fY(), sector->floorplane.ZatPoint(seg->v2));
 			  if (int(pitchmin) > int(pitchtemp)) pitchmin = pitchtemp;
 			  pitchtemp = clipperv.PointToPseudoPitch(seg->v2->fX(), seg->v2->fY(), sector->ceilingplane.ZatPoint(seg->v2));
 			  if (int(pitchmax) < int(pitchtemp)) pitchmax = pitchtemp;
 			  pitchvisible |= clipperv.SafeCheckRange(pitchmin, pitchmax);
-			  if (pitchvisible && anglevisible) break;
+			  if (pitchvisible && anglevisible && radarvisible) break;
 			}
 		        seg++;
 		}
-		// Skip subsector if outside vertical or horizontal clippers
-		if(!pitchvisible || !anglevisible) return;
+		// Skip subsector if outside vertical or horizontal clippers or is in unexplored territory (fog of war)
+		if(!pitchvisible || !anglevisible || (!radarvisible && r_radarclipper)) return;
 	}
 
 	if (mClipPortal)
@@ -928,7 +954,7 @@ void HWDrawInfo::RenderBSP(void *node, bool drawpsprites)
 	// Give the DrawInfo the viewpoint in fixed point because that's what the nodes are.
 	viewx = FLOAT2FIXED(Viewpoint.Pos.X);
 	viewy = FLOAT2FIXED(Viewpoint.Pos.Y);
-	if ((Viewpoint.camera->ViewPos != NULL) && (Viewpoint.camera->ViewPos->Flags & (VPSF_ABSOLUTEOFFSET | VPSF_ALLOWOUTOFBOUNDS)))
+	if (r_radarclipper && !(Level->flags3 & LEVEL3_NOFOGOFWAR) && (Viewpoint.camera->ViewPos != NULL) && (Viewpoint.camera->ViewPos->Flags & (VPSF_ABSOLUTEOFFSET | VPSF_ALLOWOUTOFBOUNDS)))
 	{
 	        if (Viewpoint.camera->tracer != NULL)
 		{

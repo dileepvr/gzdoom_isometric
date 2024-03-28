@@ -56,3 +56,4 @@ EXTERN_CVAR(Bool, gl_lightadditivesurfaces)
 EXTERN_CVAR(Bool, gl_notexturefill)
 
 EXTERN_CVAR(Bool, r_drawplayersprites)
+EXTERN_CVAR(Bool, r_radarclipper)
