@@ -102,7 +102,7 @@ CVAR (Bool, r_deathcamera, false, CVAR_ARCHIVE)
 CVAR (Int, r_clearbuffer, 0, 0)
 CVAR (Bool, r_drawvoxels, true, 0)
 CVAR (Bool, r_drawplayersprites, true, 0)	// [RH] Draw player sprites?
-CVAR (Bool, r_radarclipper, true, 0)	        // [DVR] Use the horizontal clipper from camera->tracer's perspective
+
 CUSTOM_CVAR(Float, r_quakeintensity, 1.0f, CVAR_ARCHIVE | CVAR_GLOBALCONFIG)
 {
 	if (self < 0.f) self = 0.f;
@@ -973,7 +973,7 @@ void R_SetupFrame (FRenderViewpoint &viewpoint, FViewWindow &viewwindow, AActor 
 					        P_AdjustViewPos(mo, orig, next, viewpoint.sector, unlinked, VP, &viewpoint);
 					}
 					
-					if (viewpoint.sector->PortalGroup != oldsector->PortalGroup || (unlinked && ((iview->New.Pos.XY() - iview->Old.Pos.XY()).LengthSquared()) > 256 * 256))
+					if (viewpoint.sector->PortalGroup != oldsector->PortalGroup || (unlinked && ((iview->New.Pos.XY() - iview->Old.Pos.XY()).LengthSquared()) > 256 * 256) || (VP->Flags & VPSF_ALLOWOUTOFBOUNDS && V_IsHardwareRenderer()))
 					{
 						iview->otic = nowtic;
 						iview->Old = iview->New;

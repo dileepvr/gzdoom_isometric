@@ -143,7 +143,6 @@ class SpectatorCamera : Actor
 	{
 		+NOBLOCKMAP
 		+NOGRAVITY
-		+NOSECTOR
 		+NOINTERACTION
 		RenderStyle "None";
 		CameraHeight 0;

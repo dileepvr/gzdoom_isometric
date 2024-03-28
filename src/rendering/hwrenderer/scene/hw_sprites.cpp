@@ -512,7 +512,7 @@ bool HWSprite::CalculateVertices(HWDrawInfo* di, FVector3* v, DVector3* vp)
 			        float angleRad = (FAngle::fromDeg(270.) - HWAngles.Yaw).Radians();
 				mat.Translate(center.X, center.Z, center.Y);
 				mat.Translate(0.0, z2 - center.Z, 0.0);
-				mat.Rotate(-sin(angleRad), 0, cos(angleRad), -HWAngles.Pitch.Degrees());
+				mat.Rotate(-sin(angleRad), 0, cos(angleRad), -actor->isotheta);
 				mat.Translate(0.0, center.Z - z2, 0.0);
 				mat.Translate(-center.X, -center.Z, -center.Y);
 			}

@@ -279,6 +279,8 @@ void HWDrawInfo::SetViewArea()
     auto &vp = Viewpoint;
 	// The render_sector is better suited to represent the current position in GL
 	vp.sector = Level->PointInRenderSubsector(vp.Pos)->render_sector;
+	if ((vp.camera->ViewPos != NULL) && (vp.camera->ViewPos->Flags & VPSF_ALLOWOUTOFBOUNDS))
+	  vp.sector = Level->PointInRenderSubsector(vp.camera->Pos())->render_sector;
 
 	// Get the heightsec state from the render sector, not the current one!
 	if (vp.sector->GetHeightSec())

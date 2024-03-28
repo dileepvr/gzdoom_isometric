@@ -51,7 +51,6 @@
 CVAR(Bool, gl_multithread, true, CVAR_ARCHIVE | CVAR_GLOBALCONFIG)
 
 EXTERN_CVAR(Float, r_actorspriteshadowdist)
-EXTERN_CVAR(Bool, r_radarclipper)
 
 thread_local bool isWorkerThread;
 ctpl::thread_pool renderPool(1);
@@ -929,10 +928,18 @@ void HWDrawInfo::RenderBSP(void *node, bool drawpsprites)
 	// Give the DrawInfo the viewpoint in fixed point because that's what the nodes are.
 	viewx = FLOAT2FIXED(Viewpoint.Pos.X);
 	viewy = FLOAT2FIXED(Viewpoint.Pos.Y);
-	if (r_radarclipper && (Viewpoint.camera->ViewPos != NULL) && (Viewpoint.camera->ViewPos->Flags & (VPSF_ABSOLUTEOFFSET | VPSF_ALLOWOUTOFBOUNDS)))
+	if ((Viewpoint.camera->ViewPos != NULL) && (Viewpoint.camera->ViewPos->Flags & (VPSF_ABSOLUTEOFFSET | VPSF_ALLOWOUTOFBOUNDS)))
 	{
-	        viewx = FLOAT2FIXED(Viewpoint.Pos.X - Viewpoint.camera->ViewPos->Offset.X);
-		viewy = FLOAT2FIXED(Viewpoint.Pos.Y - Viewpoint.camera->ViewPos->Offset.Y);
+	        if (Viewpoint.camera->tracer != NULL)
+		{
+		        viewx = FLOAT2FIXED(Viewpoint.camera->tracer->X());
+			viewy = FLOAT2FIXED(Viewpoint.camera->tracer->Y());
+		}
+		else
+		{
+		        viewx = FLOAT2FIXED(Viewpoint.camera->X());
+			viewy = FLOAT2FIXED(Viewpoint.camera->Y());
+		}
 	}
 
 	validcount++;	// used for processing sidedefs only once by the renderer.
