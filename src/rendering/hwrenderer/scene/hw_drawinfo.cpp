@@ -679,9 +679,12 @@ static ETraceStatus TraceCallbackForDitherTransparency(FTraceResults& res, void*
         switch(res.HitType)
 	{
 	case TRACE_HitWall:
-	  bf = res.Line->sidedef[res.Side]->sector->floorplane.ZatPoint(res.HitPos.XY());
-	  bc = res.Line->sidedef[res.Side]->sector->ceilingplane.ZatPoint(res.HitPos.XY());
-	  if ((res.HitPos.Z <= bc) && (res.HitPos.Z >= bf)) res.Line->sidedef[res.Side]->Flags |= WALLF_DITHERTRANS;
+	  if (!(res.Line->sidedef[res.Side]->Flags & WALLF_DITHERTRANS))
+	  {
+	          bf = res.Line->sidedef[res.Side]->sector->floorplane.ZatPoint(res.HitPos.XY());
+		  bc = res.Line->sidedef[res.Side]->sector->ceilingplane.ZatPoint(res.HitPos.XY());
+		  if ((res.HitPos.Z <= bc) && (res.HitPos.Z >= bf)) res.Line->sidedef[res.Side]->Flags |= WALLF_DITHERTRANS;
+	  }
 	  break;
 	case TRACE_HitFloor:
 	  res.Sector->floorplane.dithertransflag = true;
@@ -700,14 +703,18 @@ static ETraceStatus TraceCallbackForDitherTransparency(FTraceResults& res, void*
 
 void HWDrawInfo::SetDitherTransFlags(AActor* actor)
 {
-        if (actor && actor->Sector && (Viewpoint.camera->ViewPos != NULL) && (Viewpoint.camera->ViewPos->Flags & VPSF_ALLOWOUTOFBOUNDS))
+        if (actor && actor->Sector)
 	{
 	        FTraceResults results;
 		double horix = Viewpoint.Sin * actor->radius;
 		double horiy = Viewpoint.Cos * actor->radius;
 		DVector3 actorpos = actor->Pos();
 		DVector3 vvec = actorpos - Viewpoint.Pos;
-		if (Viewpoint.camera->ViewPos->Flags & VPSF_ORTHOGRAPHIC) vvec += Viewpoint.camera->Pos() - actorpos;
+		if (Viewpoint.camera->ViewPos && (Viewpoint.camera->ViewPos->Flags & VPSF_ORTHOGRAPHIC))
+		{
+		        vvec += Viewpoint.camera->Pos() - actorpos;
+			vvec *= 5.0; // Should be 4.0? (since zNear is behind screen by 3*dist in VREyeInfo::GetProjection())
+		}
 		double distance = vvec.Length() - actor->radius;
 		DVector3 campos = actorpos - vvec;
 		sector_t* startsec;

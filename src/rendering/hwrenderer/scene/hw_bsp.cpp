@@ -52,6 +52,7 @@ CVAR(Bool, gl_multithread, true, CVAR_ARCHIVE | CVAR_GLOBALCONFIG)
 
 EXTERN_CVAR(Float, r_actorspriteshadowdist)
 EXTERN_CVAR(Bool, r_radarclipper)
+EXTERN_CVAR(Bool, r_dithertransparency)
 
 thread_local bool isWorkerThread;
 ctpl::thread_pool renderPool(1);
@@ -341,7 +342,7 @@ void HWDrawInfo::AddLine (seg_t *seg, bool portalclip)
 	if (!seg->backsector)
 	{
 	        if(!((Viewpoint.camera->ViewPos != NULL) && (Viewpoint.camera->ViewPos->Flags & VPSF_ALLOWOUTOFBOUNDS)))
-		        clipper.SafeAddClipRange(startAngle, endAngle); // Don't clip if camera allowed out of bounds
+		        if (!(seg->sidedef->Flags & WALLF_DITHERTRANS)) clipper.SafeAddClipRange(startAngle, endAngle);
 	}
 	else if (!ispoly)	// Two-sided polyobjects never obstruct the view
 	{
@@ -369,7 +370,7 @@ void HWDrawInfo::AddLine (seg_t *seg, bool portalclip)
 			if (hw_CheckClip(seg->sidedef, currentsector, backsector))
 			{
 			        if(!((Viewpoint.camera->ViewPos != NULL) && (Viewpoint.camera->ViewPos->Flags & VPSF_ALLOWOUTOFBOUNDS)))
-				        clipper.SafeAddClipRange(startAngle, endAngle); // Don't clip if camera allowed out of bounds
+				        if (!(seg->sidedef->Flags & WALLF_DITHERTRANS)) clipper.SafeAddClipRange(startAngle, endAngle);
 			}
 		}
 	}
@@ -577,7 +578,7 @@ void HWDrawInfo::RenderThings(subsector_t * sub, sector_t * sector)
 		if (thing->validcount == validcount) continue;
 		thing->validcount = validcount;
 
-		if((Viewpoint.camera->ViewPos != NULL) && (Viewpoint.camera->ViewPos->Flags & VPSF_ALLOWOUTOFBOUNDS) && thing->Sector->isSecret() && thing->Sector->wasSecret()) continue; // This covers things that are touching non-secret sectors
+		if((Viewpoint.camera->ViewPos != NULL) && (Viewpoint.camera->ViewPos->Flags & VPSF_ALLOWOUTOFBOUNDS) && thing->Sector->isSecret() && thing->Sector->wasSecret() && !r_radarclipper) continue; // This covers things that are touching non-secret sectors
 		FIntCVar *cvar = thing->GetInfo()->distancecheck;
 		if (cvar != nullptr && *cvar >= 0)
 		{
@@ -711,7 +712,7 @@ void HWDrawInfo::DoSubsector(subsector_t * sub)
 
 	fakesector=hw_FakeFlat(sector, in_area, false);
 
-	if((Viewpoint.camera->ViewPos != NULL) && (Viewpoint.camera->ViewPos->Flags & VPSF_ALLOWOUTOFBOUNDS) && sector->isSecret() && sector->wasSecret()) return;
+	if((Viewpoint.camera->ViewPos != NULL) && (Viewpoint.camera->ViewPos->Flags & VPSF_ALLOWOUTOFBOUNDS) && sector->isSecret() && sector->wasSecret() && !r_radarclipper) return;
 
 	// cull everything if subsector outside vertical clipper
 	if (sub->polys == nullptr)
@@ -738,7 +739,7 @@ void HWDrawInfo::DoSubsector(subsector_t * sub)
 			  angle_t startAngleR = clipperr.PointToPseudoAngle(seg->v2->fX(), seg->v2->fY());
 			  angle_t endAngleR = clipperr.PointToPseudoAngle(seg->v1->fX(), seg->v1->fY());
 			  if (startAngleR-endAngleR >= ANGLE_180)
-			    radarvisible |= (clipperr.SafeCheckRange(startAngleR, endAngleR) || (Level->flags3 & LEVEL3_NOFOGOFWAR) || ((sub->flags & SSECMF_DRAWN) && !multiplayer));
+			    radarvisible |= (clipperr.SafeCheckRange(startAngleR, endAngleR) || (Level->flags3 & LEVEL3_NOFOGOFWAR) || ((sub->flags & SSECMF_DRAWN) && !deathmatch));
 			  pitchmin = clipperv.PointToPseudoPitch(seg->v1->fX(), seg->v1->fY(), sector->floorplane.ZatPoint(seg->v1));
 			  pitchmax = clipperv.PointToPseudoPitch(seg->v1->fX(), seg->v1->fY(), sector->ceilingplane.ZatPoint(seg->v1));
 			  pitchvisible |= clipperv.SafeCheckRange(pitchmin, pitchmax);
@@ -802,7 +803,7 @@ void HWDrawInfo::DoSubsector(subsector_t * sub)
 
 		if (gl_render_things && (sector->touching_renderthings || sector->sectorportal_thinglist))
 		{
-			if (multithread)
+		        if (multithread)
 			{
 				jobQueue.AddJob(RenderJob::SpriteJob, sub, nullptr);
 			}
@@ -812,6 +813,23 @@ void HWDrawInfo::DoSubsector(subsector_t * sub)
 				RenderThings(sub, fakesector);
 				SetupSprite.Unclock();
 			}
+		}
+		if (r_dithertransparency)
+		{
+		        // [DVR] Not parallelizable due to line->validcount race coundition
+		        for (auto p = sector->touching_renderthings; p != nullptr; p = p->m_snext)
+			{
+			        auto thing = p->m_thing;
+				if (((thing->flags & MF_SHOOTABLE) && (thing->health > 0)) || (thing->flags & MF_MISSILE))
+				{
+				        if ( P_CheckSight(players[consoleplayer].mo, thing, 0) )
+					{
+				                SetDitherTransFlags(thing);
+					}
+				}
+			}
+			validcount++; // [DVR] Need this since Trace() and P_CheckSight() get called
+			// and they set line->validcount = validcount, preventing lines from being processed.
 		}
 	}
 

@@ -903,8 +903,9 @@ void main()
 	};
 
 	vec3 fragHSV = rgb2hsv(FragColor.rgb);
-	float brightness = clamp(3.0*fragHSV.z, 0.0, 1.0);
+	float brightness = clamp(1.5*fragHSV.z, 0.1, 1.0);
 	if (DITHER_THRESHOLDS[index] < brightness) discard;
+	else FragColor *= 0.5;
 #endif
 
 #ifdef GBUFFER_PASS
